@@ -105,15 +105,7 @@ export default function DashboardShell() {
           </div>
         </div>
 
-        {/* Attribution placeholder (bottom-right is Mapbox controls) */}
-        <div
-          className="glass-panel pointer-events-auto animate-slide-up px-3 py-1.5"
-          style={{ animationDelay: '240ms' }}
-        >
-          <span className="text-[10px] text-text-muted">
-            Globe Projection · {isSatellite ? 'Satellite' : 'Dark Vector'}
-          </span>
-        </div>
+
       </div>
     </div>
   );

@@ -28,9 +28,10 @@ export const useMapStore = create<MapState>((set, get) => ({
     const { activeNode, nodes } = get();
     if (!activeNode || nodes.length <= 1) return;
     
-    // Find current index and calculate next (looping back to 0)
     const currentIndex = nodes.findIndex((n) => n.id === activeNode.id);
     const nextIndex = (currentIndex + 1) % nodes.length;
+    
+    console.log('[Navigation Debug - NEXT] Current Index:', currentIndex, 'Next Index:', nextIndex, 'Total Nodes:', nodes.length);
     
     set({ activeNode: nodes[nextIndex] });
   },
@@ -39,9 +40,10 @@ export const useMapStore = create<MapState>((set, get) => ({
     const { activeNode, nodes } = get();
     if (!activeNode || nodes.length <= 1) return;
     
-    // Find current index and calculate previous (looping back to end)
     const currentIndex = nodes.findIndex((n) => n.id === activeNode.id);
     const prevIndex = (currentIndex - 1 + nodes.length) % nodes.length;
+    
+    console.log('[Navigation Debug - PREV] Current Index:', currentIndex, 'Prev Index:', prevIndex, 'Total Nodes:', nodes.length);
     
     set({ activeNode: nodes[prevIndex] });
   },
