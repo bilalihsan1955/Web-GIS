@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { useMapStore } from '@/store/useMapStore';
-import { sampleGeoJSON } from '@/lib/geojson';
+// sampleGeoJSON removed
 import {
   MAPBOX_STYLE,
   INITIAL_CENTER,
@@ -36,10 +36,12 @@ export function useMapbox() {
   const openViewer = useMapStore((s) => s.openViewer);
 
   const setupLayers = useCallback((map: mapboxgl.Map) => {
+    const initialGeoJSON = useMapStore.getState().geoJSON || { type: 'FeatureCollection', features: [] };
+    
     // ── GeoJSON Source with clustering ──────────────────────────────
     map.addSource(SOURCE_ID, {
       type: 'geojson',
-      data: sampleGeoJSON,
+      data: initialGeoJSON,
       cluster: true,
       clusterMaxZoom: CLUSTER_MAX_ZOOM,
       clusterRadius: CLUSTER_RADIUS,
@@ -157,6 +159,18 @@ export function useMapbox() {
     },
     [openViewer],
   );
+
+  const geoJSON = useMapStore((s) => s.geoJSON);
+
+  // ── Sync GeoJSON data to map source when it loads from Supabase ──
+  useEffect(() => {
+    if (mapRef.current && geoJSON) {
+      const source = mapRef.current.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
+      if (source) {
+        source.setData(geoJSON);
+      }
+    }
+  }, [geoJSON]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;

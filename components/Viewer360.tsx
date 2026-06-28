@@ -23,18 +23,18 @@ export default function Viewer360() {
 
   // 2. Decouple Viewer Instantiation from Data Loading
   useEffect(() => {
-    if (!isViewerOpen || !containerRef.current || !activeNode?.imagePath) return;
+    if (!isViewerOpen || !containerRef.current || !activeNode?.image_url) return;
     
     // Safeguard: Prevent double instantiation
     if (viewerRef.current) return;
 
     // Track the initial load to prevent the second useEffect from double-fetching
-    currentPath.current = activeNode.imagePath;
-    console.log('[DEBUG] Initialising Viewer with panorama:', activeNode.imagePath);
+    currentPath.current = activeNode.image_url;
+    console.log('[DEBUG] Initialising Viewer with panorama:', activeNode.image_url);
 
     const viewer = new Viewer({
       container: containerRef.current,
-      panorama: activeNode.imagePath,
+      panorama: activeNode.image_url,
       navbar: false, // Disable default UI toolbar for our custom glassmorphism UI
       loadingImg: '', // Disables native PSV loading spinner
       loadingTxt: '', // Disables native PSV loading text
@@ -58,19 +58,19 @@ export default function Viewer360() {
 
   // SEPARATE useEffect ONLY for updating the panorama
   useEffect(() => {
-    if (viewerRef.current && activeNode?.imagePath) {
+    if (viewerRef.current && activeNode?.image_url) {
       // 4. Debug the Double Request & Prevent Race Condition
-      if (currentPath.current === activeNode.imagePath) {
-        console.log('[DEBUG] Skipping duplicate load for:', activeNode.imagePath);
+      if (currentPath.current === activeNode.image_url) {
+        console.log('[DEBUG] Skipping duplicate load for:', activeNode.image_url);
         return; 
       }
       
-      console.log('[DEBUG] Setting NEW panorama:', activeNode.imagePath);
-      currentPath.current = activeNode.imagePath;
+      console.log('[DEBUG] Setting NEW panorama:', activeNode.image_url);
+      currentPath.current = activeNode.image_url;
       
       setIsLoading(true);
       
-      viewerRef.current.setPanorama(activeNode.imagePath).catch((err) => {
+      viewerRef.current.setPanorama(activeNode.image_url).catch((err) => {
         console.error('Failed to set panorama:', err);
         setIsLoading(false); // Hide spinner if it fails
       });
@@ -90,10 +90,10 @@ export default function Viewer360() {
     const prevIndex = (currentIndex - 1 + nodes.length) % nodes.length;
     
     const imgNext = new window.Image();
-    imgNext.src = nodes[nextIndex].imagePath;
+    imgNext.src = nodes[nextIndex].image_url;
     
     const imgPrev = new window.Image();
-    imgPrev.src = nodes[prevIndex].imagePath;
+    imgPrev.src = nodes[prevIndex].image_url;
   }, [activeNode]);
 
   if (!isViewerOpen || !activeNode) return null;

@@ -1,7 +1,9 @@
 'use client';
 
+import React, { useEffect } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMapbox } from '@/hooks/useMapbox';
+import { useMapStore } from '@/store/useMapStore';
 
 /**
  * Primary Mapbox GL JS globe map.
@@ -13,6 +15,12 @@ import { useMapbox } from '@/hooks/useMapbox';
  */
 export default function MapboxGlobe() {
   const { mapContainerRef } = useMapbox();
+  const fetchNodes = useMapStore((s) => s.fetchNodes);
+
+  // Fetch the live nodes from Supabase when the map canvas mounts
+  useEffect(() => {
+    fetchNodes();
+  }, [fetchNodes]);
 
   return (
     <div
