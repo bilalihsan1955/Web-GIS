@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { MAPBOX_STYLE } from '@/lib/constants';
+import MapSidebar from './MapSidebar';
 
 /**
  * Absolute-positioned glassmorphism overlay panels sitting on top of the map.
@@ -40,25 +41,14 @@ export default function DashboardShell() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between p-4 md:p-6">
-      {/* ── Top Row ──────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        {/* Logo / Title */}
-        <div className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-3 px-5 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-cyan/15">
-            <Radio className="h-5 w-5 text-accent-cyan" />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight text-text-primary">
-              GeoSpatial Dashboard
-            </h1>
-            <p className="text-[11px] text-text-muted">
-              Real-time Node Monitoring
-            </p>
-          </div>
-        </div>
+    <>
+      {/* ── Left Sidebar ───────────────────────────────────────────── */}
+      <MapSidebar />
 
-        {/* Quick action buttons */}
+      <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between p-4 md:p-6 pl-[360px]">
+        {/* ── Top Row ──────────────────────────────────────────────── */}
+        <div className="flex items-start justify-end gap-4">
+          {/* Quick action buttons */}
         <div
           className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5"
           style={{ animationDelay: '80ms' }}
@@ -106,7 +96,8 @@ export default function DashboardShell() {
         </div>
 
 
+        </div>
       </div>
-    </div>
+    </>
   );
 }

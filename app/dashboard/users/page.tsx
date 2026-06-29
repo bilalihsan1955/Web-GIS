@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/utils/supabase/client';
-import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff } from 'lucide-react';
+import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown } from 'lucide-react';
 
 interface AppUser {
   id: string;
@@ -31,6 +31,9 @@ export default function UsersManagementPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
   const [showPassword, setShowPassword] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
   
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
@@ -322,6 +325,13 @@ export default function UsersManagementPage() {
     </div>
   );
 
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          user.role.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter ? user.role.toLowerCase() === roleFilter.toLowerCase() : true;
+    return matchesSearch && matchesRole;
+  });
+
   return (
     <div className="space-y-6 animate-fade-in pb-12 font-sans relative">
       
@@ -334,13 +344,58 @@ export default function UsersManagementPage() {
       )}
 
       {/* Page Context Actions */}
-      <div className="flex items-center justify-end">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
+        <div className="relative w-full flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search users by email or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-slate-900/50 backdrop-blur-md border border-white/20 text-white placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"
+          />
+        </div>
+
+        {/* Custom Role Filter Dropdown */}
+        <div className="relative z-[70]">
+          <button
+            onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-inner outline-none
+              ${isRoleFilterOpen ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-900/50 border-white/20 text-slate-300 hover:border-white/30 hover:bg-white/5'}`}
+          >
+            <span className="font-medium text-sm">{roleFilter ? (roleFilter === 'admin' ? 'Admin' : 'User') : 'All Roles'}</span>
+            <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isRoleFilterOpen ? 'rotate-180 text-cyan-400' : 'text-slate-400'}`} />
+          </button>
+          
+          {isRoleFilterOpen && (
+            <>
+              <div className="fixed inset-0 z-[100]" onClick={() => setIsRoleFilterOpen(false)} />
+              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in origin-top">
+                {[
+                  { value: '', label: 'All Roles' },
+                  { value: 'admin', label: 'Admin' },
+                  { value: 'user', label: 'User' }
+                ].map((roleOption) => (
+                  <button
+                    key={roleOption.value || 'all'}
+                    onClick={() => { setRoleFilter(roleOption.value); setIsRoleFilterOpen(false); }}
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0 hover:bg-white/10
+                      ${roleFilter === roleOption.value ? 'bg-cyan-500/10 text-cyan-400 font-semibold' : 'text-slate-300'}`}
+                  >
+                    {roleOption.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         <button 
           onClick={openCreateModal}
-          className="flex items-center bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+          className="flex items-center justify-center bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0 h-[46px]"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New User
+          <Plus className="w-5 h-5 mr-2 shrink-0" />
+          Tambah User
         </button>
       </div>
 
@@ -366,13 +421,13 @@ export default function UsersManagementPage() {
                     <td className="px-6 py-5 text-right"><div className="h-6 bg-white/10 rounded w-16 ml-auto"></div></td>
                   </tr>
                 ))
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                    No users found.
+                    {searchQuery ? 'No users found matching your search.' : 'No users found.'}
                   </td>
                 </tr>
-              ) : users.map((u) => (
+              ) : filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-5 font-medium text-white flex items-center drop-shadow-sm">
                     <UserCog className="w-4 h-4 mr-3 text-cyan-400" />

@@ -10,8 +10,16 @@ interface MapState {
   openViewer: (nodeId: string) => void;
   closeViewer: () => void;
   goToNextNode: () => void;
+  goToNextNode: () => void;
   goToPrevNode: () => void;
   fetchNodes: () => Promise<void>;
+  
+  // Filtering state
+  searchQuery: string;
+  activeSection: string;
+  setSearchQuery: (q: string) => void;
+  setActiveSection: (s: string) => void;
+  isLoading: boolean;
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -19,8 +27,16 @@ export const useMapStore = create<MapState>((set, get) => ({
   activeNode: null,
   nodes: [],
   geoJSON: null,
+  isLoading: true,
+  
+  searchQuery: '',
+  activeSection: 'ALL',
+
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  setActiveSection: (s) => set({ activeSection: s }),
 
   fetchNodes: async () => {
+    set({ isLoading: true });
     const supabase = createClient();
     
     // Query spatial_nodes and join with locations table for the name
@@ -33,12 +49,14 @@ export const useMapStore = create<MapState>((set, get) => ({
         latitude,
         capture_date,
         locations (
-          name
+          name,
+          description
         )
       `);
 
     if (error) {
       console.error('[MapStore] Failed to fetch spatial nodes from Supabase:', error);
+      set({ isLoading: false });
       return;
     }
 
@@ -47,6 +65,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         id: item.id.toString(),
         locationGroup: item.locations?.name || 'Unknown Location',
         locationName: item.locations?.name || 'Unknown Location',
+        section: item.locations?.description || '',
         image_url: item.image_url,
         coordinates: [item.longitude, item.latitude],
         captureDate: item.capture_date || '',
@@ -66,7 +85,7 @@ export const useMapStore = create<MapState>((set, get) => ({
     };
 
     console.log(`[MapStore] Fetched and mapped ${mappedNodes.length} nodes from Supabase.`);
-    set({ nodes: mappedNodes, geoJSON });
+    set({ nodes: mappedNodes, geoJSON, isLoading: false });
   },
 
   openViewer: (nodeId) => {

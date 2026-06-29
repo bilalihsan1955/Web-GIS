@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@/utils/supabase/client';
 import imageCompression from 'browser-image-compression';
 import exifr from 'exifr';
-import { UploadCloud, CheckCircle2, XCircle, Loader2, MapPin, X, Calendar, Edit, AlertTriangle } from 'lucide-react';
+import { UploadCloud, CheckCircle2, XCircle, Loader2, MapPin, X, Calendar, Edit, AlertTriangle, ChevronDown } from 'lucide-react';
 
 interface FileProgress {
   id: string;
@@ -34,6 +34,8 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
   // Modal State for Finalizing Details
   const [activeDetailsFileId, setActiveDetailsFileId] = useState<string | null>(null);
   const [locationName, setLocationName] = useState('');
+  const [locationDescription, setLocationDescription] = useState('');
+  const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
   const [editCaptureDate, setEditCaptureDate] = useState('');
 
   // Automatically pop the Details modal if a file is waiting and no modal is currently open
@@ -44,6 +46,8 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
         setActiveDetailsFileId(nextFile.id);
         setEditCaptureDate(nextFile.extractedData?.captureDate || '');
         setLocationName('');
+        setLocationDescription('');
+        setIsSectionDropdownOpen(false);
       }
     }
   }, [filesProgress, activeDetailsFileId]);
@@ -56,7 +60,25 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
     };
 
     try {
-      updateProgress({ status: 'compressing', progress: 10 });
+      updateProgress({ status: 'compressing', progress: 5 });
+      
+      // 1. Check 360 format (aspect ratio ~2:1)
+      const is360 = await new Promise<boolean>((resolve) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const ratio = img.width / img.height;
+          // Equirectangular is exactly 2.0, allowing slight margin
+          resolve(ratio >= 1.9 && ratio <= 2.1);
+        };
+        img.onerror = () => resolve(false);
+        img.src = URL.createObjectURL(fileProgress.file);
+      });
+
+      if (!is360) {
+        throw new Error('Upload ditolak: Gambar harus berformat panorama 360° (Rasio 2:1).');
+      }
+
+      updateProgress({ progress: 10 });
       const exifData = await exifr.parse(fileProgress.file, { gps: true, exif: true });
       
       if (!exifData || !exifData.latitude || !exifData.longitude) {
@@ -144,10 +166,17 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
 
       if (existingLoc) {
         locId = existingLoc.id;
+        // Optionally update description if the location already exists and user selected a new section
+        if (locationDescription) {
+          await supabase
+            .from('locations')
+            .update({ description: locationDescription })
+            .eq('id', locId);
+        }
       } else {
         const { data: newLoc, error: locErr } = await supabase
           .from('locations')
-          .insert({ name: locationName, slug })
+          .insert({ name: locationName, slug, description: locationDescription })
           .select('id')
           .single();
         if (locErr) throw locErr;
@@ -300,6 +329,50 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
                 onChange={(e) => setLocationName(e.target.value)}
                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner"
               />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-slate-300 mb-2 flex items-center">
+                <MapPin className="w-4 h-4 mr-2" /> Section Category
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsSectionDropdownOpen(!isSectionDropdownOpen)}
+                  className={`w-full bg-black/40 border flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all shadow-inner outline-none
+                    ${isSectionDropdownOpen ? 'border-cyan-500/50 ring-2 ring-cyan-500/20 text-white' : 'border-white/10 text-white hover:border-white/20'}`}
+                >
+                  <span className={locationDescription ? 'text-white font-medium' : 'text-white/30'}>
+                    {locationDescription || 'Pilih Section...'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isSectionDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} />
+                </button>
+                
+                {isSectionDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-[100]" 
+                      onClick={() => setIsSectionDropdownOpen(false)}
+                    />
+                    <div className="absolute z-[101] w-full mt-2 bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in origin-top">
+                      {['Section 1', 'Section 2', 'Section 3', 'Section 4'].map((section) => (
+                        <button
+                          key={section}
+                          type="button"
+                          onClick={() => {
+                            setLocationDescription(section);
+                            setIsSectionDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0 hover:bg-white/10
+                            ${locationDescription === section ? 'bg-cyan-500/10 text-cyan-400 font-semibold' : 'text-slate-300'}`}
+                        >
+                          {section}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <div>

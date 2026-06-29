@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/utils/supabase/client';
-import { MapPin, Image as ImageIcon, HardDrive, Edit, Trash2, X, Loader2, CheckCircle2, UploadCloud, Users } from 'lucide-react';
+import { MapPin, Image as ImageIcon, HardDrive, Edit, Trash2, X, Loader2, CheckCircle2, UploadCloud, Users, Search, ChevronDown } from 'lucide-react';
 import SmartUploader from '@/components/admin/SmartUploader';
 import imageCompression from 'browser-image-compression';
 
@@ -18,10 +18,16 @@ export default function DashboardPage() {
   const [totalLocations, setTotalLocations] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
+  const [isSectionFilterOpen, setIsSectionFilterOpen] = useState(false);
+
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [editLocationId, setEditLocationId] = useState('');
+  const [editLocationName, setEditLocationName] = useState('');
+  const [editLocationDescription, setEditLocationDescription] = useState('');
+  const [isEditSectionDropdownOpen, setIsEditSectionDropdownOpen] = useState(false);
   const [editCaptureDate, setEditCaptureDate] = useState('');
   const [editIsPublished, setEditIsPublished] = useState(true);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
@@ -31,7 +37,7 @@ export default function DashboardPage() {
 
   // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; image_url: string } | null>(null);
+  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; image_url: string; location_id: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -43,11 +49,26 @@ export default function DashboardPage() {
   async function fetchData() {
     const { data: spatialNodes } = await supabase
       .from('spatial_nodes')
-      .select('*, locations(name)')
+      .select('*, locations(name, description)')
       .order('created_at', { ascending: false });
 
     const { data: locs } = await supabase.from('locations').select('id, name').order('name');
+    
+    // Default fallback to user_roles
     const { count: usersCount } = await supabase.from('user_roles').select('*', { count: 'exact', head: true });
+    
+    // Try to get real count from API (includes users without explicit role entries)
+    try {
+      const res = await fetch('/api/dashboard/users');
+      const apiData = await res.json();
+      if (apiData.users) {
+        setTotalUsers(apiData.users.length);
+      } else if (usersCount !== null) {
+        setTotalUsers(usersCount);
+      }
+    } catch (e) {
+      if (usersCount !== null) setTotalUsers(usersCount);
+    }
 
     if (spatialNodes) {
       setNodes(spatialNodes);
@@ -58,16 +79,14 @@ export default function DashboardPage() {
     if (locs) {
       setLocations(locs);
     }
-    if (usersCount !== null) {
-      setTotalUsers(usersCount);
-    }
     setLoading(false);
   }
 
   // Handle Edit Actions
   const openEditModal = (node: any) => {
     setSelectedNode(node);
-    setEditLocationId(node.location_id || '');
+    setEditLocationName(node.locations?.name || '');
+    setEditLocationDescription(node.locations?.description || '');
     setEditCaptureDate(node.capture_date || '');
     setEditIsPublished(node.is_published);
     setEditImageFile(null);
@@ -94,6 +113,21 @@ export default function DashboardPage() {
       let finalImageUrl = selectedNode.image_url;
 
       if (editImageFile) {
+        // Check 360 format (aspect ratio ~2:1)
+        const is360 = await new Promise<boolean>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const ratio = img.width / img.height;
+            resolve(ratio >= 1.9 && ratio <= 2.1);
+          };
+          img.onerror = () => resolve(false);
+          img.src = URL.createObjectURL(editImageFile);
+        });
+
+        if (!is360) {
+          throw new Error('Update ditolak: Gambar baru harus berformat panorama 360° (Rasio 2:1).');
+        }
+
         // Compress Image
         const options = { maxSizeMB: 5, maxWidthOrHeight: 4096, useWebWorker: true };
         const compressedFile = await imageCompression(editImageFile, options);
@@ -126,11 +160,37 @@ export default function DashboardPage() {
         }
       }
 
+      // Handle Location mapping atomically
+      let locId = '';
+      const slug = editLocationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      const { data: existingLoc, error: queryErr } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (queryErr) throw queryErr;
+
+      if (existingLoc) {
+        locId = existingLoc.id;
+        // Update the section (description) of the existing location if changed
+        await supabase.from('locations').update({ description: editLocationDescription }).eq('id', locId);
+      } else {
+        const { data: newLoc, error: insertErr } = await supabase
+          .from('locations')
+          .insert({ name: editLocationName, slug, description: editLocationDescription })
+          .select('id')
+          .single();
+        if (insertErr) throw insertErr;
+        locId = newLoc.id;
+      }
+
       // Update DB Record
       const { error } = await supabase
         .from('spatial_nodes')
         .update({
-          location_id: editLocationId,
+          location_id: locId,
           capture_date: editCaptureDate || null,
           is_published: editIsPublished,
           image_url: finalImageUrl
@@ -149,8 +209,8 @@ export default function DashboardPage() {
   };
 
   // Handle Delete Actions
-  const openDeleteModal = (nodeId: string, imageUrl: string) => {
-    setNodeToDelete({ id: nodeId, image_url: imageUrl });
+  const openDeleteModal = (nodeId: string, imageUrl: string, locationId: string) => {
+    setNodeToDelete({ id: nodeId, image_url: imageUrl, location_id: locationId });
     setDeleteError('');
     setIsDeleteModalOpen(true);
   };
@@ -161,33 +221,49 @@ export default function DashboardPage() {
     setDeleteError('');
     
     try {
-      // 1. Delete from Local Storage via API
+      // Step 1 & 2: Delete from Local Storage via API
       if (nodeToDelete.image_url) {
-        try {
-          await fetch('/api/upload/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath: nodeToDelete.image_url })
-          });
-        } catch (err) {
-          console.error("Local storage delete error:", err);
+        const res = await fetch('/api/upload/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath: nodeToDelete.image_url })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to delete physical image file');
         }
       }
 
-      // 2. Delete from DB
-      const { error: dbError } = await supabase
+      // Step 3: Delete the node from spatial_nodes
+      const { error: nodeError } = await supabase
         .from('spatial_nodes')
         .delete()
         .eq('id', nodeToDelete.id);
         
-      if (dbError) throw dbError;
+      if (nodeError) throw nodeError;
 
+      // Step 4: Delete the location from locations table
+      if (nodeToDelete.location_id) {
+        const { error: locError } = await supabase
+          .from('locations')
+          .delete()
+          .eq('id', nodeToDelete.location_id);
+          
+        if (locError) throw locError;
+      }
+
+      // Success: Close modal and optimistically update state
       setIsDeleteModalOpen(false);
+      
+      setNodes(prev => prev.filter(n => n.id !== nodeToDelete.id));
+      setLocations(prev => prev.filter(l => l.id !== nodeToDelete.location_id));
+      setTotalNodes(prev => Math.max(0, prev - 1));
+      
       setNodeToDelete(null);
-      fetchData(); // Refresh the table
+      fetchData(); // Background refresh to ensure perfect sync
     } catch (err: any) {
-      console.error(err);
-      setDeleteError(err.message || 'Failed to delete the node.');
+      console.error('Delete error:', err);
+      setDeleteError(err.message || 'Failed to complete full deletion process.');
     } finally {
       setDeleteLoading(false);
     }
@@ -236,19 +312,46 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Location Group</label>
-            <select 
-              value={editLocationId} 
-              onChange={e => setEditLocationId(e.target.value)} 
-              className="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-inner"
-              required
-            >
-              <option value="" disabled className="bg-slate-900 text-slate-400">Select an existing location...</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id} className="bg-slate-900 text-white">{loc.name}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Location Name</label>
+              <input 
+                type="text" 
+                value={editLocationName} 
+                onChange={e => setEditLocationName(e.target.value)} 
+                placeholder="e.g. Area A"
+                className="w-full bg-black/40 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner"
+                required
+              />
+            </div>
+            
+            <div className="relative">
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Section</label>
+              <div 
+                className="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 cursor-pointer flex justify-between items-center shadow-inner hover:bg-black/60 transition-colors"
+                onClick={() => setIsEditSectionDropdownOpen(!isEditSectionDropdownOpen)}
+              >
+                <span>{editLocationDescription || 'Pilih Section...'}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isEditSectionDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {isEditSectionDropdownOpen && (
+                <div className="absolute z-50 w-full mt-2 bg-slate-800 border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in">
+                  {['Section 1', 'Section 2', 'Section 3', 'Section 4'].map((sec) => (
+                    <div 
+                      key={sec}
+                      className="px-4 py-3 hover:bg-cyan-500/20 hover:text-cyan-400 cursor-pointer transition-colors text-sm text-slate-200"
+                      onClick={() => {
+                        setEditLocationDescription(sec);
+                        setIsEditSectionDropdownOpen(false);
+                      }}
+                    >
+                      {sec}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -328,6 +431,13 @@ export default function DashboardPage() {
     </div>
   );
 
+  const filteredNodes = nodes.filter(node => {
+    const matchesSearch = node.locations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          node.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSection = sectionFilter ? node.locations?.description === sectionFilter : true;
+    return matchesSearch && matchesSection;
+  });
+
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       
@@ -392,7 +502,7 @@ export default function DashboardPage() {
                 <Users className="h-6 w-6 text-amber-400" />
               </div>
               <div className="ml-5">
-                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider drop-shadow-sm">Total Pengguna</p>
+                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider drop-shadow-sm">Total User</p>
                 <p className="text-3xl font-bold text-white mt-1 drop-shadow-md">{totalUsers}</p>
               </div>
             </>
@@ -409,6 +519,50 @@ export default function DashboardPage() {
       {/* ── LIVE DATA GRID / TABLE ── */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4 drop-shadow-md px-2">Spatial Nodes Directory</h2>
+        
+        <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
+          <div className="relative w-full flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by location name or node ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-900/50 backdrop-blur-md border border-white/20 text-white placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"
+            />
+          </div>
+
+          {/* Custom Section Filter Dropdown */}
+          <div className="relative z-[70]">
+            <button
+              onClick={() => setIsSectionFilterOpen(!isSectionFilterOpen)}
+              className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-inner outline-none
+                ${isSectionFilterOpen ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-900/50 border-white/20 text-slate-300 hover:border-white/30 hover:bg-white/5'}`}
+            >
+              <span className="font-medium text-sm">{sectionFilter || 'All Sections'}</span>
+              <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isSectionFilterOpen ? 'rotate-180 text-cyan-400' : 'text-slate-400'}`} />
+            </button>
+            
+            {isSectionFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-[100]" onClick={() => setIsSectionFilterOpen(false)} />
+                <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in origin-top">
+                  {['', 'Section 1', 'Section 2', 'Section 3', 'Section 4'].map((section) => (
+                    <button
+                      key={section || 'all'}
+                      onClick={() => { setSectionFilter(section); setIsSectionFilterOpen(false); }}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0 hover:bg-white/10
+                        ${sectionFilter === section ? 'bg-cyan-500/10 text-cyan-400 font-semibold' : 'text-slate-300'}`}
+                    >
+                      {section || 'All Sections'}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl overflow-hidden flex flex-col">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -434,14 +588,14 @@ export default function DashboardPage() {
                       <td className="px-6 py-5 text-right"><div className="h-6 bg-white/10 rounded w-16 ml-auto"></div></td>
                     </tr>
                   ))
-                ) : nodes.length === 0 ? (
+                ) : filteredNodes.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                      No 360 images found. Upload using the pipeline above.
+                      {searchQuery ? 'No nodes found matching your search.' : 'No 360 images found. Upload using the pipeline above.'}
                     </td>
                   </tr>
                 ) : (
-                  nodes.map((node) => (
+                  filteredNodes.map((node) => (
                     <tr key={node.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-5">
                         <div className="h-12 w-12 rounded-lg overflow-hidden bg-black/40 border border-white/10 relative shadow-inner">
@@ -458,9 +612,16 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-semibold text-white drop-shadow-sm">
-                          {node.locations?.name || 'Unknown'}
-                        </span>
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-sm font-semibold text-white drop-shadow-sm">
+                            {node.locations?.name || 'Unknown'}
+                          </span>
+                          {node.locations?.description && (
+                            <span className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 w-fit">
+                              {node.locations.description}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-5">
                         <div className="text-sm text-slate-300 font-mono text-[13px] bg-black/20 px-2 py-1 rounded w-fit border border-white/5 drop-shadow-sm">
@@ -491,7 +652,7 @@ export default function DashboardPage() {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
-                            onClick={() => openDeleteModal(node.id, node.image_url)}
+                            onClick={() => openDeleteModal(node.id, node.image_url, node.location_id)}
                             className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all" 
                             title="Delete Node"
                           >

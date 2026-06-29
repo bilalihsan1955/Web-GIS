@@ -14,8 +14,8 @@ export const INITIAL_ZOOM = 4;
 export const GLOBE_PROJECTION = 'globe' as const;
 
 // ── Clustering ──────────────────────────────────────────────────────────────
-export const CLUSTER_RADIUS = 50;
-export const CLUSTER_MAX_ZOOM = 14;
+export const CLUSTER_RADIUS = 35;   // Radius lebih kecil agar node lebih mudah terpisah
+export const CLUSTER_MAX_ZOOM = 20;  // Clustering aktif sampai zoom 20, memungkinkan pemisahan di zoom tinggi
 
 // ── Source / Layer IDs (prevents typos) ─────────────────────────────────────
 export const SOURCE_ID = 'spatial-nodes';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { LogOut } from 'lucide-react';
@@ -10,11 +10,6 @@ export default function LogoutButton() {
   const router = useRouter();
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -33,7 +28,7 @@ export default function LogoutButton() {
       </button>
 
       {/* ── LOGOUT MODAL ── */}
-      {isMounted && document.body && isOpen && createPortal(
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100000] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
           <div 
             className="relative bg-slate-900/90 border border-white/20 p-8 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up"
