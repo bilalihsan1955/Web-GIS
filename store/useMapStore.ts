@@ -13,7 +13,7 @@ interface MapState {
   goToNextNode: () => void;
   goToPrevNode: () => void;
   fetchNodes: () => Promise<void>;
-  
+
   // Filtering state
   searchQuery: string;
   activeSection: string;
@@ -28,7 +28,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   nodes: [],
   geoJSON: null,
   isLoading: true,
-  
+
   searchQuery: '',
   activeSection: 'ALL',
 
@@ -38,7 +38,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   fetchNodes: async () => {
     set({ isLoading: true });
     const supabase = createClient();
-    
+
     // Query spatial_nodes and join with locations table for the name
     const { data, error } = await supabase
       .from('spatial_nodes')
@@ -99,20 +99,20 @@ export const useMapStore = create<MapState>((set, get) => ({
   goToNextNode: () => {
     const { activeNode, nodes } = get();
     if (!activeNode || nodes.length <= 1) return;
-    
+
     const currentIndex = nodes.findIndex((n) => n.id === activeNode.id);
     const nextIndex = (currentIndex + 1) % nodes.length;
-    
+
     set({ activeNode: nodes[nextIndex] });
   },
 
   goToPrevNode: () => {
     const { activeNode, nodes } = get();
     if (!activeNode || nodes.length <= 1) return;
-    
+
     const currentIndex = nodes.findIndex((n) => n.id === activeNode.id);
     const prevIndex = (currentIndex - 1 + nodes.length) % nodes.length;
-    
+
     set({ activeNode: nodes[prevIndex] });
   },
 }));

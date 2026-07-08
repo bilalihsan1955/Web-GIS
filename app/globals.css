@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 
 /* ── Design Tokens (Tailwind 4 @theme) ────────────────────────────────── */
 @theme inline {
@@ -26,7 +28,7 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 html {

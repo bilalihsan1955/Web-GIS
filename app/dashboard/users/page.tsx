@@ -188,7 +188,7 @@ export default function UsersManagementPage() {
         <div className="bg-red-500/20 border border-red-500/30 p-6 rounded-full mb-6 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
           <ShieldAlert className="h-16 w-16 text-red-400" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-md">Access Denied</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 drop-shadow-sm dark:drop-shadow-md">Access Denied</h1>
         <p className="text-slate-300 max-w-md mx-auto">
           You do not have the required administrative privileges to view or manage system users. Please contact a system administrator.
         </p>
@@ -197,11 +197,11 @@ export default function UsersManagementPage() {
   }
 
   const createModalContent = isCreateModalOpen && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-slate-900/90 border border-white/20 p-8 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
+      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white">Create New User</h3>
-          <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Create New User</h3>
+          <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -212,13 +212,13 @@ export default function UsersManagementPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Email Address</label>
-            <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner" />
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Email Address</label>
+            <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Temporary Password</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Temporary Password</label>
             <div className="relative">
-              <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner" />
+              <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
               <button 
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
@@ -229,15 +229,15 @@ export default function UsersManagementPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">System Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-inner">
-              <option value="user" className="bg-slate-900 text-white">User (Standard Access)</option>
-              <option value="admin" className="bg-slate-900 text-white">Admin (Full Access)</option>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+              <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+              <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (Full Access)</option>
             </select>
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-300 font-bold hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/10">
+            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
+            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
               Create Account
             </button>
@@ -248,11 +248,11 @@ export default function UsersManagementPage() {
   );
 
   const editModalContent = isEditModalOpen && selectedUser && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-slate-900/90 border border-white/20 p-8 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
+      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white">Edit User Role</h3>
-          <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Edit User Role</h3>
+          <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -263,19 +263,19 @@ export default function UsersManagementPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Account Email</label>
-            <input type="text" value={selectedUser.email} disabled className="w-full bg-black/40 border border-white/5 text-slate-500 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-inner" />
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Account Email</label>
+            <input type="text" value={selectedUser.email} disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">System Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-inner">
-              <option value="user" className="bg-slate-900 text-white">User (Standard Access)</option>
-              <option value="admin" className="bg-slate-900 text-white">Admin (Full Access)</option>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+              <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+              <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (Full Access)</option>
             </select>
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-300 font-bold hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/10">
+            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
+            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
               Save Changes
             </button>
@@ -286,15 +286,15 @@ export default function UsersManagementPage() {
   );
 
   const deleteModalContent = isDeleteModalOpen && userToDelete && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-slate-900/90 border border-white/20 p-8 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
+      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-500/30 mb-2">
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30 mb-2">
             <Trash2 className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-white drop-shadow-md">Confirm Deletion</h3>
-          <p className="text-sm text-slate-400 drop-shadow-sm leading-relaxed">
-            Are you sure you want to permanently delete <strong className="text-white">{userToDelete.email}</strong>? This cannot be undone.
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Confirm Deletion</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 drop-shadow-sm leading-relaxed">
+            Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
           </p>
 
           {modalError && (
@@ -307,14 +307,14 @@ export default function UsersManagementPage() {
             <button 
               onClick={() => setIsDeleteModalOpen(false)} 
               disabled={modalLoading}
-              className="flex-1 px-5 py-2.5 text-slate-300 font-bold hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button 
               onClick={confirmDeleteUser}
               disabled={modalLoading}
-              className="flex-1 px-5 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 font-bold rounded-xl hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-lg shadow-red-500/10"
+              className="flex-1 px-5 py-2.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-red-500/10"
             >
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete
@@ -337,7 +337,7 @@ export default function UsersManagementPage() {
       
       {/* Top Level Error Display for non-modal actions */}
       {modalError && !isCreateModalOpen && !isEditModalOpen && !isDeleteModalOpen && (
-        <div className="bg-red-500/10 text-red-400 p-4 rounded-xl border border-red-500/20 shadow-md flex justify-between items-center">
+        <div className="bg-red-500/10 text-red-400 p-4 rounded-xl border border-red-500/20 shadow-none flex justify-between items-center">
           <span>{modalError}</span>
           <button onClick={() => setModalError('')} className="hover:text-red-300"><X className="w-4 h-4" /></button>
         </div>
@@ -346,13 +346,13 @@ export default function UsersManagementPage() {
       {/* Page Context Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
         <div className="relative w-full flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
           <input 
             type="text" 
             placeholder="Search users by email or role..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-slate-900/50 backdrop-blur-md border border-white/20 text-white placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"
+            className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
           />
         </div>
 
@@ -360,17 +360,19 @@ export default function UsersManagementPage() {
         <div className="relative z-[70]">
           <button
             onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-inner outline-none
-              ${isRoleFilterOpen ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-900/50 border-white/20 text-slate-300 hover:border-white/30 hover:bg-white/5'}`}
+            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-none dark:shadow-inner outline-none
+              ${isRoleFilterOpen 
+                ? 'bg-cyan-50 border-cyan-300 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/50 dark:text-cyan-400' 
+                : 'bg-white/70 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white/90 dark:bg-slate-900/50 dark:border-white/20 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/5'}`}
           >
             <span className="font-medium text-sm">{roleFilter ? (roleFilter === 'admin' ? 'Admin' : 'User') : 'All Roles'}</span>
-            <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isRoleFilterOpen ? 'rotate-180 text-cyan-400' : 'text-slate-400'}`} />
+            <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isRoleFilterOpen ? 'text-cyan-600 dark:text-cyan-400 rotate-180' : 'text-slate-400'}`} />
           </button>
           
           {isRoleFilterOpen && (
             <>
               <div className="fixed inset-0 z-[100]" onClick={() => setIsRoleFilterOpen(false)} />
-              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in origin-top">
+              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top">
                 {[
                   { value: '', label: 'All Roles' },
                   { value: 'admin', label: 'Admin' },
@@ -379,8 +381,10 @@ export default function UsersManagementPage() {
                   <button
                     key={roleOption.value || 'all'}
                     onClick={() => { setRoleFilter(roleOption.value); setIsRoleFilterOpen(false); }}
-                    className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0 hover:bg-white/10
-                      ${roleFilter === roleOption.value ? 'bg-cyan-500/10 text-cyan-400 font-semibold' : 'text-slate-300'}`}
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
+                      ${roleFilter === roleOption.value 
+                        ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' 
+                        : 'text-slate-700 dark:text-slate-300'}`}
                   >
                     {roleOption.label}
                   </button>
@@ -392,7 +396,7 @@ export default function UsersManagementPage() {
 
         <button 
           onClick={openCreateModal}
-          className="flex items-center justify-center bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0 h-[46px]"
+          className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-none dark:shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0 h-[46px]"
         >
           <Plus className="w-5 h-5 mr-2 shrink-0" />
           Tambah User
@@ -400,60 +404,60 @@ export default function UsersManagementPage() {
       </div>
 
       {/* ── DATA TABLE ── */}
-      <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-none dark:shadow-xl overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-slate-300 font-semibold bg-black/20">
+              <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
                 <th className="px-6 py-5">Account Email</th>
                 <th className="px-6 py-5">System Role</th>
                 <th className="px-6 py-5">Joined Date</th>
                 <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse bg-white/5 border-b border-white/5 last:border-0">
-                    <td className="px-6 py-5 flex items-center"><div className="h-4 w-4 bg-white/10 rounded-full mr-3 shrink-0"></div><div className="h-4 bg-white/10 rounded w-48"></div></td>
-                    <td className="px-6 py-5"><div className="h-6 bg-white/10 rounded-full w-24"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-white/10 rounded w-24"></div></td>
-                    <td className="px-6 py-5 text-right"><div className="h-6 bg-white/10 rounded w-16 ml-auto"></div></td>
+                  <tr key={i} className="animate-pulse bg-white/5 border-b border-slate-100 dark:border-white/5 last:border-0">
+                    <td className="px-6 py-5 flex items-center"><div className="h-4 w-4 bg-slate-200 dark:bg-white/10 rounded-full mr-3 shrink-0"></div><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-48"></div></td>
+                    <td className="px-6 py-5"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-24"></div></td>
+                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>
+                    <td className="px-6 py-5 text-right"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     {searchQuery ? 'No users found matching your search.' : 'No users found.'}
                   </td>
                 </tr>
               ) : filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-5 font-medium text-white flex items-center drop-shadow-sm">
-                    <UserCog className="w-4 h-4 mr-3 text-cyan-400" />
+                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-5 font-medium text-slate-900 dark:text-white flex items-center drop-shadow-sm">
+                    <UserCog className="w-4 h-4 mr-3 text-cyan-700 dark:text-cyan-400" />
                     {u.email}
                   </td>
                   <td className="px-6 py-5">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      u.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      u.role === 'admin' ? 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30' : 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                     }`}>
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-sm text-slate-300 drop-shadow-sm">
+                  <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 drop-shadow-sm">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end space-x-3">
                       <button 
                         onClick={() => openEditModal(u)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-white/10 transition-all font-medium text-sm flex items-center"
+                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
                         <Edit className="w-4 h-4 mr-1.5" /> Edit
                       </button>
                       <button 
                         onClick={() => openDeleteModal(u)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
+                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
                       >
                         <Trash2 className="w-4 h-4 mr-1.5" /> Delete
                       </button>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 import dynamic from 'next/dynamic';
 import MapLoadingFallback from '@/components/ui/MapLoadingFallback';
 import DashboardShell from '@/components/ui/DashboardShell';
@@ -32,6 +34,26 @@ const MapboxGlobe = dynamic(
  *   3. Viewer modal (fixed, z-50, conditional)
  */
 export default function DashboardPage() {
+  const { theme, setTheme } = useTheme();
+  const originalTheme = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (originalTheme.current === undefined) {
+      originalTheme.current = theme;
+    }
+    
+    if (theme !== 'dark') {
+      setTheme('dark');
+    }
+
+    return () => {
+      if (originalTheme.current === 'light') {
+        setTheme('light');
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <>
       {/* Layer 1: Map Canvas */}

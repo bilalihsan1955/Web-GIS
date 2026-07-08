@@ -270,14 +270,14 @@ export default function DashboardPage() {
   };
 
   const editModalContent = isEditModalOpen && selectedNode && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
       <div 
-        className="bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-6 border-b border-white/10 bg-black/20">
-          <h3 className="text-lg font-bold text-white drop-shadow-md">Edit Spatial Node</h3>
-          <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-white transition-colors relative z-[110] cursor-pointer">
+        <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Edit Spatial Node</h3>
+          <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors relative z-[110] cursor-pointer">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -291,9 +291,9 @@ export default function DashboardPage() {
           
           {/* Image Replacement */}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">360° Image</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">360° Image</label>
             <div className="flex items-center gap-4">
-              <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-black/40 border border-white/10 relative shadow-inner">
+              <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 relative shadow-none dark:shadow-inner">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={editImagePreview} alt="Preview" className="w-full h-full object-cover" />
               </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                   onChange={handleEditImageSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <div className="bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-sm text-cyan-400 font-semibold hover:bg-slate-800 transition-colors">
+                <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-sm text-cyan-600 dark:text-cyan-400 font-semibold hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                   <UploadCloud className="w-4 h-4" /> Replace Image
                 </div>
                 <p className="text-xs text-slate-500 mt-2 text-center">New image will be compressed automatically.</p>
@@ -313,72 +313,75 @@ export default function DashboardPage() {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Location Name</label>
-              <input 
-                type="text" 
-                value={editLocationName} 
-                onChange={e => setEditLocationName(e.target.value)} 
-                placeholder="e.g. Area A"
-                className="w-full bg-black/40 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Location Name</label>
+            <input 
+              type="text" 
+              required
+              value={editLocationName} 
+              onChange={e => setEditLocationName(e.target.value)} 
+              className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm"
+            />
+          </div>
             
             <div className="relative">
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Section</label>
-              <div 
-                className="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 cursor-pointer flex justify-between items-center shadow-inner hover:bg-black/60 transition-colors"
-                onClick={() => setIsEditSectionDropdownOpen(!isEditSectionDropdownOpen)}
-              >
-                <span>{editLocationDescription || 'Pilih Section...'}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isEditSectionDropdownOpen ? 'rotate-180' : ''}`} />
-              </div>
-              
-              {isEditSectionDropdownOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-slate-800 border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in">
-                  {['Section 1', 'Section 2', 'Section 3', 'Section 4'].map((sec) => (
-                    <div 
-                      key={sec}
-                      className="px-4 py-3 hover:bg-cyan-500/20 hover:text-cyan-400 cursor-pointer transition-colors text-sm text-slate-200"
-                      onClick={() => {
-                        setEditLocationDescription(sec);
-                        setIsEditSectionDropdownOpen(false);
-                      }}
-                    >
-                      {sec}
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Map Section (Optional)</label>
+                <div className="relative">
+                  <div 
+                    onClick={() => setIsEditSectionDropdownOpen(!isEditSectionDropdownOpen)}
+                    className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 cursor-pointer flex justify-between items-center shadow-none dark:shadow-inner hover:bg-white/80 dark:hover:bg-black/60 transition-colors backdrop-blur-sm"
+                  >
+                    <span>{editLocationDescription || 'Pilih Section...'}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isEditSectionDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                  
+                  {isEditSectionDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in">
+                      {['Section 1', 'Section 2', 'Section 3', 'Section 4'].map((sec) => (
+                        <div 
+                          key={sec}
+                          className="px-4 py-3 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 hover:text-cyan-600 dark:hover:text-cyan-400 cursor-pointer transition-colors text-sm text-slate-700 dark:text-slate-200"
+                          onClick={() => {
+                            setEditLocationDescription(sec);
+                            setIsEditSectionDropdownOpen(false);
+                          }}
+                        >
+                          {sec}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Capture Date</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Capture Date</label>
             <input 
               type="date" 
               value={editCaptureDate} 
               onChange={e => setEditCaptureDate(e.target.value)} 
-              className="w-full bg-black/40 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-inner" 
+              className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" 
             />
           </div>
 
           <div>
-            <label className="flex items-center space-x-3 cursor-pointer p-3 bg-black/20 rounded-xl border border-white/5">
+            <label className="flex items-center space-x-3 cursor-pointer p-3 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-white/5">
               <input 
                 type="checkbox"
                 checked={editIsPublished}
                 onChange={(e) => setEditIsPublished(e.target.checked)}
-                className="w-5 h-5 rounded border-white/10 bg-black/40 text-cyan-400 focus:ring-cyan-500/50 focus:ring-offset-0 focus:ring-offset-transparent"
+                className="w-5 h-5 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-black/40 text-cyan-500 dark:text-cyan-400 focus:ring-cyan-500/50 focus:ring-offset-0 focus:ring-offset-transparent"
               />
-              <span className="text-sm font-semibold text-slate-300">Published (Visible on Map)</span>
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-300">Published (Visible on Map)</span>
             </label>
           </div>
 
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-300 font-bold hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/10">
+            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
+            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
               Save Changes
             </button>
@@ -389,17 +392,17 @@ export default function DashboardPage() {
   );
 
   const deleteModalContent = isDeleteModalOpen && nodeToDelete && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
       <div 
-        className="bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 text-center space-y-4">
-          <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-500/30 mb-2">
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30 mb-2">
             <Trash2 className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-white drop-shadow-md">Confirm Deletion</h3>
-          <p className="text-sm text-slate-400 drop-shadow-sm leading-relaxed">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Confirm Deletion</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 drop-shadow-sm leading-relaxed">
             Are you sure you want to permanently delete this panorama? This action will remove the file from storage and the database and cannot be undone.
           </p>
 
@@ -413,14 +416,14 @@ export default function DashboardPage() {
             <button 
               onClick={() => setIsDeleteModalOpen(false)} 
               disabled={deleteLoading}
-              className="flex-1 px-5 py-2.5 text-slate-300 font-bold hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button 
               onClick={confirmDeleteNode}
               disabled={deleteLoading}
-              className="flex-1 px-5 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 font-bold rounded-xl hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-lg shadow-red-500/10"
+              className="flex-1 px-5 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 font-bold rounded-xl hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-red-500/10"
             >
               {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete
@@ -443,67 +446,67 @@ export default function DashboardPage() {
       
       {/* ── ANALYTICS STAT CARDS ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center hover:bg-white/5 transition-colors">
+        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
           {loading ? (
             <>
-              <div className="h-[58px] w-[58px] rounded-xl bg-white/10 animate-pulse border border-white/5 shrink-0" />
+              <div className="h-[58px] w-[58px] rounded-xl bg-slate-200 dark:bg-white/10 animate-pulse border border-slate-200 dark:border-white/5 shrink-0" />
               <div className="ml-5 space-y-2 w-full">
-                <div className="h-4 w-24 bg-white/10 animate-pulse rounded" />
-                <div className="h-8 w-16 bg-white/10 animate-pulse rounded" />
+                <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 animate-pulse rounded" />
+                <div className="h-8 w-16 bg-slate-200 dark:bg-white/10 animate-pulse rounded" />
               </div>
             </>
           ) : (
             <>
-              <div className="bg-cyan-500/20 p-4 rounded-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-                <ImageIcon className="h-6 w-6 text-cyan-400" />
+              <div className="h-[58px] w-[58px] rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20 shadow-none dark:shadow-inner">
+                <MapPin className="h-7 w-7 text-cyan-700 dark:text-cyan-400" />
               </div>
               <div className="ml-5">
-                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider drop-shadow-sm">Total Nodes</p>
-                <p className="text-3xl font-bold text-white mt-1 drop-shadow-md">{totalNodes}</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Total Nodes</p>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalNodes}</p>
               </div>
             </>
           )}
         </div>
         
-        <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center hover:bg-white/5 transition-colors">
+        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
           {loading ? (
             <>
-              <div className="h-[58px] w-[58px] rounded-xl bg-white/10 animate-pulse border border-white/5 shrink-0" />
+              <div className="h-[58px] w-[58px] rounded-xl bg-slate-100 dark:bg-white/10 animate-pulse border border-slate-200 dark:border-white/5 shrink-0" />
               <div className="ml-5 space-y-2 w-full">
-                <div className="h-4 w-24 bg-white/10 animate-pulse rounded" />
-                <div className="h-8 w-16 bg-white/10 animate-pulse rounded" />
+                <div className="h-4 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+                <div className="h-8 w-16 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
               </div>
             </>
           ) : (
             <>
-              <div className="bg-purple-500/20 p-4 rounded-xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                <MapPin className="h-6 w-6 text-purple-400" />
+              <div className="bg-purple-500/10 dark:bg-purple-500/20 p-4 rounded-xl border border-purple-500/20 shadow-none dark:shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                <MapPin className="h-6 w-6 text-purple-700 dark:text-purple-400" />
               </div>
               <div className="ml-5">
-                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider drop-shadow-sm">Active Locations</p>
-                <p className="text-3xl font-bold text-white mt-1 drop-shadow-md">{totalLocations}</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Active Locations</p>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalLocations}</p>
               </div>
             </>
           )}
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center hover:bg-white/5 transition-colors">
+        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
           {loading ? (
             <>
-              <div className="h-[58px] w-[58px] rounded-xl bg-white/10 animate-pulse border border-white/5 shrink-0" />
+              <div className="h-[58px] w-[58px] rounded-xl bg-slate-100 dark:bg-white/10 animate-pulse border border-slate-200 dark:border-white/5 shrink-0" />
               <div className="ml-5 space-y-2 w-full">
-                <div className="h-4 w-24 bg-white/10 animate-pulse rounded" />
-                <div className="h-8 w-16 bg-white/10 animate-pulse rounded" />
+                <div className="h-4 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+                <div className="h-8 w-16 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
               </div>
             </>
           ) : (
             <>
-              <div className="bg-amber-500/20 p-4 rounded-xl border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <Users className="h-6 w-6 text-amber-400" />
+              <div className="bg-amber-500/10 dark:bg-amber-500/20 p-4 rounded-xl border border-amber-500/20 shadow-none dark:shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <Users className="h-6 w-6 text-amber-700 dark:text-amber-400" />
               </div>
               <div className="ml-5">
-                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider drop-shadow-sm">Total User</p>
-                <p className="text-3xl font-bold text-white mt-1 drop-shadow-md">{totalUsers}</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Total User</p>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalUsers}</p>
               </div>
             </>
           )}
@@ -512,23 +515,23 @@ export default function DashboardPage() {
 
       {/* ── SMART BATCH UPLOADER ── */}
       <section>
-        <h2 className="text-lg font-bold text-white mb-4 drop-shadow-md px-2">Upload Pipeline</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Upload Pipeline</h2>
         <SmartUploader onUploadComplete={fetchData} />
       </section>
 
       {/* ── LIVE DATA GRID / TABLE ── */}
       <section>
-        <h2 className="text-lg font-bold text-white mb-4 drop-shadow-md px-2">Spatial Nodes Directory</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Spatial Nodes Directory</h2>
         
         <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
           <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
             <input 
               type="text" 
               placeholder="Search by location name or node ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-900/50 backdrop-blur-md border border-white/20 text-white placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner"
+              className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
             />
           </div>
 
@@ -536,23 +539,27 @@ export default function DashboardPage() {
           <div className="relative z-[70]">
             <button
               onClick={() => setIsSectionFilterOpen(!isSectionFilterOpen)}
-              className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-inner outline-none
-                ${isSectionFilterOpen ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-900/50 border-white/20 text-slate-300 hover:border-white/30 hover:bg-white/5'}`}
+              className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-none dark:shadow-inner outline-none
+                ${isSectionFilterOpen 
+                  ? 'bg-cyan-50 border-cyan-300 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/50 dark:text-cyan-400' 
+                  : 'bg-white/70 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white/90 dark:bg-slate-900/50 dark:border-white/20 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/5'}`}
             >
               <span className="font-medium text-sm">{sectionFilter || 'All Sections'}</span>
-              <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isSectionFilterOpen ? 'rotate-180 text-cyan-400' : 'text-slate-400'}`} />
+              <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isSectionFilterOpen ? 'text-cyan-600 dark:text-cyan-400 rotate-180' : 'text-slate-400'}`} />
             </button>
             
             {isSectionFilterOpen && (
               <>
                 <div className="fixed inset-0 z-[100]" onClick={() => setIsSectionFilterOpen(false)} />
-                <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fade-in origin-top">
+                <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top">
                   {['', 'Section 1', 'Section 2', 'Section 3', 'Section 4'].map((section) => (
                     <button
                       key={section || 'all'}
                       onClick={() => { setSectionFilter(section); setIsSectionFilterOpen(false); }}
-                      className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0 hover:bg-white/10
-                        ${sectionFilter === section ? 'bg-cyan-500/10 text-cyan-400 font-semibold' : 'text-slate-300'}`}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
+                        ${sectionFilter === section 
+                          ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' 
+                          : 'text-slate-700 dark:text-slate-300'}`}
                     >
                       {section || 'All Sections'}
                     </button>
@@ -563,11 +570,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-none dark:shadow-xl overflow-hidden flex flex-col">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-slate-300 font-semibold bg-black/20">
+                <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
                   <th className="px-6 py-5">Preview</th>
                   <th className="px-6 py-5">Location</th>
                   <th className="px-6 py-5">Coordinates</th>
@@ -576,16 +583,16 @@ export default function DashboardPage() {
                   <th className="px-6 py-5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/10">
                 {loading ? (
                   [...Array(5)].map((_, i) => (
-                    <tr key={i} className="animate-pulse bg-white/5 border-b border-white/5 last:border-0">
-                      <td className="px-6 py-5"><div className="h-12 w-12 bg-white/10 rounded-lg"></div></td>
-                      <td className="px-6 py-5"><div className="h-4 bg-white/10 rounded w-32"></div></td>
-                      <td className="px-6 py-5"><div className="h-4 bg-white/10 rounded w-32"></div></td>
-                      <td className="px-6 py-5"><div className="h-4 bg-white/10 rounded w-24"></div></td>
-                      <td className="px-6 py-5"><div className="h-6 bg-white/10 rounded-full w-16"></div></td>
-                      <td className="px-6 py-5 text-right"><div className="h-6 bg-white/10 rounded w-16 ml-auto"></div></td>
+                    <tr key={i} className="animate-pulse border-b border-slate-100 dark:border-white/5 last:border-0">
+                      <td className="px-6 py-5"><div className="h-12 w-12 bg-slate-200 dark:bg-white/10 rounded-lg"></div></td>
+                      <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-32"></div></td>
+                      <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-32"></div></td>
+                      <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>
+                      <td className="px-6 py-5"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-16"></div></td>
+                      <td className="px-6 py-5 text-right"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
                     </tr>
                   ))
                 ) : filteredNodes.length === 0 ? (
@@ -596,9 +603,9 @@ export default function DashboardPage() {
                   </tr>
                 ) : (
                   filteredNodes.map((node) => (
-                    <tr key={node.id} className="hover:bg-white/5 transition-colors">
+                    <tr key={node.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <td className="px-6 py-5">
-                        <div className="h-12 w-12 rounded-lg overflow-hidden bg-black/40 border border-white/10 relative shadow-inner">
+                        <div className="h-12 w-12 rounded-lg bg-slate-100 dark:bg-black/40 overflow-hidden relative border border-slate-200 dark:border-white/10 shadow-none dark:shadow-sm">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img 
                             src={node.image_url} 
@@ -613,50 +620,48 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex flex-col space-y-1">
-                          <span className="text-sm font-semibold text-white drop-shadow-sm">
-                            {node.locations?.name || 'Unknown'}
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white drop-shadow-sm">
+                            {node.locations?.name || 'Unnamed'}
                           </span>
                           {node.locations?.description && (
-                            <span className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 w-fit">
+                            <span className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 w-fit">
                               {node.locations.description}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="text-sm text-slate-300 font-mono text-[13px] bg-black/20 px-2 py-1 rounded w-fit border border-white/5 drop-shadow-sm">
+                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 font-mono">
                           {node.latitude?.toFixed(5) || '-'}, {node.longitude?.toFixed(5) || '-'}
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-sm text-slate-300 drop-shadow-sm">
+                      <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 drop-shadow-sm">
                         {node.capture_date || '-'}
                       </td>
                       <td className="px-6 py-5">
                         {node.is_published ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                             Published
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-slate-500/20 text-slate-300 border border-slate-500/30">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300 border border-slate-300 dark:border-slate-500/30">
                             Draft
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex items-center justify-end space-x-3">
+                        <div className="flex items-center justify-end space-x-2 transition-opacity">
                           <button 
                             onClick={() => openEditModal(node)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-white/10 transition-all" 
-                            title="Edit Node"
+                            className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-cyan-200 dark:hover:border-cyan-500/30 backdrop-blur-sm"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => openDeleteModal(node.id, node.image_url, node.location_id)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all" 
-                            title="Delete Node"
+                            className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/20 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-red-200 dark:hover:border-red-500/30 backdrop-blur-sm"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
