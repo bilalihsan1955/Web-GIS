@@ -1,11 +1,45 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronUp, ChevronDown, Radio } from 'lucide-react';
-import { useMapStore } from '@/store/useMapStore';
+import { useParams } from 'next/navigation';
+import { useMapStore, ADMIN_SLUG_MAP } from '@/store/useMapStore';
 import { useDashboardStore } from '@/store/useDashboardStore';
+import { createClient } from '@/utils/supabase/client';
 
 export default function MapSidebar() {
+  const params = useParams();
+  const adminId = params.adminId as string;
+  const companyProfiles = useMapStore((s) => s.companyProfiles);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const supabase = createClient();
+    async function getSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    }
+    getSession();
+  }, []);
+
+  // Find slug for the logged-in user if we are in preview mode (where URL adminId is undefined)
+  const slug = useMemo(() => {
+    if (adminId) return adminId;
+    if (!userId) return null;
+    return Object.keys(ADMIN_SLUG_MAP).find(
+      (key) => ADMIN_SLUG_MAP[key] === userId
+    ) || userId;
+  }, [adminId, userId]);
+
+  const profile = slug ? companyProfiles[slug] : null;
+  const displayName = (mounted && profile?.name) ? profile.name : 'GeoSpatial Dashboard';
+  const displayDesc = (mounted && profile?.description) ? profile.description : 'Real-time Node Monitoring';
+  const displayIcon = (mounted && profile?.iconUrl) ? profile.iconUrl : null;
+
   const nodes = useMapStore((s) => s.nodes);
   const searchQuery = useMapStore((s) => s.searchQuery);
   const setSearchQuery = useMapStore((s) => s.setSearchQuery);
@@ -42,6 +76,7 @@ export default function MapSidebar() {
   }, [uniqueLocations, searchQuery, activeSection]);
 
   const handleLocationClick = (loc: any) => {
+    if (!mapInstance) return;
     const mapAny = mapInstance as any;
     mapAny._isFlying = true;
     mapInstance.flyTo({
@@ -82,12 +117,16 @@ export default function MapSidebar() {
         onClick={() => setIsMobileExpanded(!isMobileExpanded)}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15">
-            <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden">
+            {displayIcon ? (
+              <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
+            ) : (
+              <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            )}
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">GeoSpatial Dashboard</h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Real-time Node Monitoring</p>
+            <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{displayName}</h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{displayDesc}</p>
           </div>
         </div>
         {isMobileExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronUp className="w-5 h-5 text-slate-400" />}
@@ -99,12 +138,16 @@ export default function MapSidebar() {
         {/* Header Section (Desktop only for the title, Mobile already has it in the handle) */}
         <div className="p-6 pb-4">
           <div className="hidden md:flex items-center gap-3 mb-8">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15">
-              <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden">
+              {displayIcon ? (
+                <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
+              ) : (
+                <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              )}
             </div>
             <div>
-              <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">GeoSpatial Dashboard</h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Real-time Node Monitoring</p>
+              <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{displayName}</h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">{displayDesc}</p>
             </div>
           </div>
 

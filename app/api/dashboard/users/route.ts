@@ -9,8 +9,12 @@ export async function GET() {
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-    if (roleData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
+    }
 
+    const requesterRole = roleData.role;
+    const requesterId = user.id;
     const adminSupabase = createAdminClient();
     
     // 1. Get all users from Auth API
@@ -21,15 +25,25 @@ export async function GET() {
     const { data: rolesData, error: rolesError } = await adminSupabase.from('user_roles').select('*');
     if (rolesError) throw rolesError;
 
-    // 3. Merge
+    // 3. Merge, filter and include parent admin details
     const users = authUsers.users.map((u) => {
       const roleObj = rolesData.find((r) => r.user_id === u.id);
+      const parentAdminObj = roleObj?.parent_admin_id ? rolesData.find((r) => r.user_id === roleObj.parent_admin_id) : null;
       return {
         id: u.id,
         email: u.email,
         created_at: u.created_at,
-        role: roleObj ? roleObj.role : 'user'
+        role: roleObj ? roleObj.role : 'user',
+        parent_admin_id: roleObj?.parent_admin_id || null,
+        parent_admin_email: parentAdminObj?.email || null
       };
+    }).filter((u) => {
+      if (requesterRole === 'superadmin') return true;
+      if (requesterRole === 'admin') {
+        // Admins only see users that belong to them
+        return u.parent_admin_id === requesterId;
+      }
+      return false;
     });
 
     return NextResponse.json({ users });
@@ -45,10 +59,17 @@ export async function PUT(req: Request) {
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-    if (roleData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
+    }
 
     const { userId, role } = await req.json();
     const adminSupabase = createAdminClient();
+
+    // Only superadmin can change user roles
+    if (roleData.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Forbidden: Only Super Admin can change user roles' }, { status: 403 });
+    }
 
     const { error } = await adminSupabase.from('user_roles').update({ role }).eq('user_id', userId);
     if (error) throw error;
@@ -66,10 +87,20 @@ export async function DELETE(req: Request) {
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-    if (roleData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
+    }
 
     const { userId } = await req.json();
     const adminSupabase = createAdminClient();
+
+    // If requester is admin, verify target user belongs to them
+    if (roleData.role === 'admin') {
+      const { data: targetRole } = await adminSupabase.from('user_roles').select('parent_admin_id').eq('user_id', userId).single();
+      if (targetRole?.parent_admin_id !== user.id) {
+        return NextResponse.json({ error: 'Forbidden: You can only delete users in your group' }, { status: 403 });
+      }
+    }
 
     // Deleting from auth.users automatically cascades to user_roles
     const { error } = await adminSupabase.auth.admin.deleteUser(userId);

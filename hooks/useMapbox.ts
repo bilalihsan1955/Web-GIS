@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
+import { useSearchParams } from 'next/navigation';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { useMapStore } from '@/store/useMapStore';
 // sampleGeoJSON removed
@@ -28,6 +29,7 @@ import {
  * Returns a ref to attach to the container `<div>`.
  */
 export function useMapbox() {
+  const searchParams = useSearchParams();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
@@ -273,10 +275,23 @@ export function useMapbox() {
       if (!hasAnimatedRef.current && geoJSON.features.length > 0) {
         hasAnimatedRef.current = true;
         
-        // LOGIC FIX 1: Geographic Centroids fail if nodes are in different cities/countries (it zooms into empty space).
-        // Solution: Guarantee a perfect landing by targeting the most recent spatial node.
-        const focusFeature = geoJSON.features[0];
-        const focusCoords = (focusFeature.geometry as GeoJSON.Point).coordinates as [number, number];
+        // Check for URL query coordinates
+        const urlLat = searchParams.get('lat');
+        const urlLng = searchParams.get('lng');
+        const urlZoom = searchParams.get('zoom');
+        
+        let focusCoords: [number, number];
+        let focusZoom = 6.95;
+        
+        if (urlLat && urlLng) {
+          focusCoords = [parseFloat(urlLng), parseFloat(urlLat)];
+          if (urlZoom) {
+            focusZoom = parseFloat(urlZoom);
+          }
+        } else {
+          const focusFeature = geoJSON.features[0];
+          focusCoords = (focusFeature.geometry as GeoJSON.Point).coordinates as [number, number];
+        }
 
         // LOGIC FIX 2: The map.on('zoom') pitch handler was calling setPitch() every frame,
         // which Mapbox treats as a user interruption, aborting flyTo mid-flight.
@@ -285,7 +300,7 @@ export function useMapbox() {
         
         mapRef.current.flyTo({
           center: focusCoords,
-          zoom: 6.95, // Level jalan/blok — tidak terlalu dekat, tidak terlalu jauh
+          zoom: focusZoom,
           speed: 1, // Sedikit lebih cepat dari 0.1 agar tidak terlalu lambat
           curve: 1,
           essential: true,
@@ -298,7 +313,7 @@ export function useMapbox() {
         });
       }
     }
-  }, [geoJSON, isMapLoaded, searchQuery, activeSection]);
+  }, [geoJSON, isMapLoaded, searchQuery, activeSection, searchParams]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;

@@ -10,11 +10,14 @@ interface AppUser {
   email: string;
   role: string;
   created_at: string;
+  parent_admin_id?: string | null;
+  parent_admin_email?: string | null;
 }
 
 export default function UsersManagementPage() {
   const supabase = createClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [userRole, setUserRole] = useState<string>('user');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -52,13 +55,14 @@ export default function UsersManagementPage() {
     }
 
     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-    if (roleData?.role !== 'admin') {
+    if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       setIsAdmin(false);
       setLoading(false);
       return;
     }
 
     setIsAdmin(true);
+    setUserRole(roleData.role);
     fetchUsers();
   }
 
@@ -130,7 +134,7 @@ export default function UsersManagementPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id === u.id) {
       // Create a visually coherent way to deny self-deletion without browser alerts
-      setModalError("You cannot delete your own admin account.");
+      setModalError("You cannot delete your own account.");
       setUserToDelete(null);
       return;
     }
@@ -190,7 +194,7 @@ export default function UsersManagementPage() {
         </div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 drop-shadow-sm dark:drop-shadow-md">Access Denied</h1>
         <p className="text-slate-300 max-w-md mx-auto">
-          You do not have the required administrative privileges to view or manage system users. Please contact a system administrator.
+          You do not have the required Super Admin privileges to view or manage system users.
         </p>
       </div>
     );
@@ -230,10 +234,21 @@ export default function UsersManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-              <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-              <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (Full Access)</option>
-            </select>
+          {userRole === 'superadmin' ? (
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
+                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Super Admin (System Access)</option>
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+              <input type="text" value="User (Standard Access)" disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
+            </div>
+          )}
           </div>
           <div className="pt-4 flex justify-end space-x-3">
             <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
@@ -268,10 +283,21 @@ export default function UsersManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-              <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-              <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (Full Access)</option>
-            </select>
+          {userRole === 'superadmin' ? (
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
+                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Super Admin (System Access)</option>
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+              <input type="text" value="User (Standard Access)" disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
+            </div>
+          )}
           </div>
           <div className="pt-4 flex justify-end space-x-3">
             <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
@@ -411,6 +437,7 @@ export default function UsersManagementPage() {
               <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
                 <th className="px-6 py-5">Account Email</th>
                 <th className="px-6 py-5">System Role</th>
+                {userRole === 'superadmin' && <th className="px-6 py-5">Parent Admin</th>}
                 <th className="px-6 py-5">Joined Date</th>
                 <th className="px-6 py-5 text-right">Actions</th>
               </tr>
@@ -421,13 +448,14 @@ export default function UsersManagementPage() {
                   <tr key={i} className="animate-pulse bg-white/5 border-b border-slate-100 dark:border-white/5 last:border-0">
                     <td className="px-6 py-5 flex items-center"><div className="h-4 w-4 bg-slate-200 dark:bg-white/10 rounded-full mr-3 shrink-0"></div><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-48"></div></td>
                     <td className="px-6 py-5"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-24"></div></td>
+                    {userRole === 'superadmin' && <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>}
                     <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>
                     <td className="px-6 py-5 text-right"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={userRole === 'superadmin' ? 5 : 4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     {searchQuery ? 'No users found matching your search.' : 'No users found.'}
                   </td>
                 </tr>
@@ -444,6 +472,11 @@ export default function UsersManagementPage() {
                       {u.role}
                     </span>
                   </td>
+                  {userRole === 'superadmin' && (
+                    <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 font-mono">
+                      {u.parent_admin_email || '-'}
+                    </td>
+                  )}
                   <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 drop-shadow-sm">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>

@@ -5,7 +5,9 @@ import {
   Compass,
   Radio,
   Activity,
+  LogIn,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { MAPBOX_STYLE } from '@/lib/constants';
 import MapSidebar from './MapSidebar';
@@ -49,28 +51,37 @@ export default function DashboardShell() {
         {/* ── Top Row ──────────────────────────────────────────────── */}
         <div className="flex items-start justify-end gap-4">
           {/* Quick action buttons */}
-        <div
-          className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5"
-          style={{ animationDelay: '80ms' }}
-        >
-          <button
-            onClick={handleToggleLayers}
-            className="glass-button flex h-9 w-9 items-center justify-center"
-            aria-label="Toggle layers"
-            title={isSatellite ? 'Switch to Dark Vector' : 'Switch to Satellite'}
+          <Link
+            href="/dashboard/login"
+            className="glass-panel pointer-events-auto animate-slide-up flex h-9 px-4 items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all bg-white/80 dark:bg-black/40 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow hover:bg-slate-50 dark:hover:bg-white/10 active:scale-[0.98]"
+            style={{ animationDelay: '40ms' }}
           >
-            <Layers className={`h-4 w-4 ${isSatellite ? 'text-text-secondary' : 'text-accent-cyan'}`} />
-          </button>
-          <button
-            onClick={handleResetCompass}
-            className="glass-button flex h-9 w-9 items-center justify-center"
-            aria-label="Reset compass"
-            title="Reset compass & pitch"
+            <LogIn className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+            Login
+          </Link>
+          
+          <div
+            className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5"
+            style={{ animationDelay: '80ms' }}
           >
-            <Compass className="h-4 w-4 text-text-secondary" />
-          </button>
+            <button
+              onClick={handleToggleLayers}
+              className="glass-button flex h-9 w-9 items-center justify-center"
+              aria-label="Toggle layers"
+              title={isSatellite ? 'Switch to Dark Vector' : 'Switch to Satellite'}
+            >
+              <Layers className={`h-4 w-4 ${isSatellite ? 'text-text-secondary' : 'text-accent-cyan'}`} />
+            </button>
+            <button
+              onClick={handleResetCompass}
+              className="glass-button flex h-9 w-9 items-center justify-center"
+              aria-label="Reset compass"
+              title="Reset compass & pitch"
+            >
+              <Compass className="h-4 w-4 text-text-secondary" />
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* ── Bottom Row ───────────────────────────────────────────── */}
       <div className="flex items-end justify-between gap-4">
