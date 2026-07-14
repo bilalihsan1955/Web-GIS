@@ -156,7 +156,7 @@ export default function Viewer360() {
 
         {/* Bottom Center: Location Name */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-xl border border-white/10 bg-black/40 px-6 py-3 text-white shadow-lg backdrop-blur-md">
-          <h2 className="text-sm font-semibold tracking-widest uppercase text-white/90">
+          <h2 className="text-sm font-semibold text-white/90">
             {activeNode.locationName}
           </h2>
         </div>

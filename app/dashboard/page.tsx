@@ -1,17 +1,22 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { ChevronLeft, Building2 } from 'lucide-react';
+import { ChevronLeft, Building2, Settings, Layers } from 'lucide-react';
 import SmartUploader from '@/components/admin/SmartUploader';
 import DashboardStats from '@/components/admin/DashboardStats';
 import NodesTable from '@/components/admin/NodesTable';
 import EditNodeModal from '@/components/admin/EditNodeModal';
 import DeleteNodeModal from '@/components/admin/DeleteNodeModal';
 import CompanyGrid from '@/components/admin/CompanyGrid';
+import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
+import { useState } from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useNodeMutations } from '@/hooks/useNodeMutations';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export default function DashboardPage() {
+  const [isManageSectionsModalOpen, setIsManageSectionsModalOpen] = useState(false);
+  const { t } = useLanguage();
   const {
     loading,
     isRoleLoaded,
@@ -31,6 +36,7 @@ export default function DashboardPage() {
     setNodes,
     setLocations,
     setTotalNodes,
+    dynamicSections,
     adminGroups,
     selectedCompanyId,
     setSelectedCompanyId
@@ -45,14 +51,15 @@ export default function DashboardPage() {
 
   if (!isRoleLoaded) {
     return (
-      <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-slate-400 dark:text-slate-500">
-          <svg className="w-8 h-8 animate-spin text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span className="text-sm font-medium">Memuat Data Dashboard...</span>
+      <div className="flex flex-col gap-6 animate-pulse">
+        {/* Placeholder for header/stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-32 bg-slate-200 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-white/10"></div>
+          ))}
         </div>
+        {/* Placeholder for table */}
+        <div className="h-96 bg-slate-200 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-white/10"></div>
       </div>
     );
   }
@@ -78,32 +85,27 @@ export default function DashboardPage() {
       
       {/* ── SUPERADMIN IMPERSONATION HEADER ── */}
       {userRole === 'superadmin' && selectedCompanyId !== 'all' && (
-        <div className="flex flex-col gap-1 mb-2">
+        <div className="flex flex-col gap-3 mb-2">
           <button 
             onClick={() => setSelectedCompanyId('all')}
-            className="group flex items-center text-sm font-medium text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-colors w-fit"
+            className="group flex items-center text-sm font-medium text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-colors w-fit bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10"
           >
             <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
-            Kembali ke Direktori
+            {t('back')}
           </button>
           
-          <div className="flex items-center gap-3 mt-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0 overflow-hidden">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0 overflow-hidden">
               {activeCompany?.company_logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} className="w-full h-full object-cover" />
               ) : (
-                <Building2 className="w-6 h-6" />
+                <Building2 className="w-5 h-5" />
               )}
             </div>
-            <div className="flex flex-col">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
-                {activeCompany?.company_name || 'Tanpa Nama'}
-              </h2>
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Mode Pengelolaan Aktif
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {activeCompany?.company_name || 'Tanpa Nama'}
+            </h2>
           </div>
         </div>
       )}
@@ -120,7 +122,16 @@ export default function DashboardPage() {
       {/* ── SMART BATCH UPLOADER ── */}
       {(userRole === 'user' || userRole === 'admin' || userRole === 'superadmin') && (
         <section>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Upload Pipeline</h2>
+          <div className="flex justify-between items-center mb-4 px-2">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('uploadPipeline')}</h2>
+            <button 
+              onClick={() => setIsManageSectionsModalOpen(true)}
+              className="flex items-center text-sm font-medium text-cyan-600 hover:text-cyan-700 bg-cyan-50 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 dark:text-cyan-400 dark:border dark:border-cyan-800 hover:bg-cyan-100 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Layers className="w-4 h-4 mr-1.5" />
+              {t('manageSections')}
+            </button>
+          </div>
           <SmartUploader 
             onUploadComplete={fetchData} 
             assignToGroupId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId} 
@@ -138,6 +149,7 @@ export default function DashboardPage() {
           setSearchQuery={setSearchQuery}
           sectionFilter={sectionFilter}
           setSectionFilter={setSectionFilter}
+          dynamicSections={dynamicSections}
           filteredNodes={filteredNodes}
           openEditModal={mutations.openEditModal}
           openDeleteModal={mutations.openDeleteModal}
@@ -145,7 +157,16 @@ export default function DashboardPage() {
 
       {/* Render Modals securely outside the layout stack */}
       {isMounted && document.body && createPortal(
+        <ManageSectionsModal
+          isOpen={isManageSectionsModalOpen}
+          onClose={() => setIsManageSectionsModalOpen(false)}
+          adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
+        />,
+        document.body
+      )}
+      {isMounted && document.body && createPortal(
         <EditNodeModal 
+          adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
           isOpen={mutations.isEditModalOpen}
           onClose={() => mutations.setIsEditModalOpen(false)}
           onSubmit={mutations.handleEditSubmit}
@@ -157,6 +178,8 @@ export default function DashboardPage() {
           setEditLocationName={mutations.setEditLocationName}
           editLocationDescription={mutations.editLocationDescription}
           setEditLocationDescription={mutations.setEditLocationDescription}
+          editLocationSectionId={mutations.editLocationSectionId}
+          setEditLocationSectionId={mutations.setEditLocationSectionId}
           editCaptureDate={mutations.editCaptureDate}
           setEditCaptureDate={mutations.setEditCaptureDate}
           editIsPublished={mutations.editIsPublished}

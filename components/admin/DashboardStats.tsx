@@ -1,4 +1,5 @@
 import { MapPin, Users } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface DashboardStatsProps {
   userRole: string;
@@ -15,6 +16,8 @@ export default function DashboardStats({
   totalLocations,
   totalUsers
 }: DashboardStatsProps) {
+  const { t } = useLanguage();
+
   return (
     <div className={`grid grid-cols-1 ${userRole === 'user' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6`}>
       {/* Total Nodes Card */}
@@ -33,7 +36,7 @@ export default function DashboardStats({
               <MapPin className="h-7 w-7 text-cyan-700 dark:text-cyan-400" />
             </div>
             <div className="ml-5">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Total Nodes</p>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{t('totalNodes')}</p>
               <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalNodes}</p>
             </div>
           </>
@@ -56,7 +59,7 @@ export default function DashboardStats({
               <MapPin className="h-6 w-6 text-purple-700 dark:text-purple-400" />
             </div>
             <div className="ml-5">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Active Locations</p>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{t('activeLocations')}</p>
               <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalLocations}</p>
             </div>
           </>
@@ -80,7 +83,7 @@ export default function DashboardStats({
                 <Users className="h-6 w-6 text-amber-700 dark:text-amber-400" />
               </div>
               <div className="ml-5">
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Active Users</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{t('activeUsers')}</p>
                 <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalUsers}</p>
               </div>
             </>

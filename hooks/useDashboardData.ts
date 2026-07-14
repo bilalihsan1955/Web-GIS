@@ -77,7 +77,7 @@ export function useDashboardData() {
       .from('spatial_nodes')
       .select(`
         *,
-        locations(name, description),
+        locations(name, description, section_id, company_sections(name)),
         creator:user_roles!fk_spatial_nodes_created_by_user_roles (
           email,
           role,
@@ -110,9 +110,10 @@ export function useDashboardData() {
     if (spatialNodes) {
       // Filter the nodes so that regular admins/users only see nodes from their group
       const filteredByGroup = spatialNodes.filter((node: any) => {
-        // determine the group of the node creator
         // If the creator has a parent_admin_id (Co-Admin or User), that is the group. Otherwise, they are the owner.
-        const nodeCreatorGroupId = node.creator?.parent_admin_id || node.created_by;
+        // Supabase joins can sometimes return arrays or objects depending on the foreign key relationship cardinality detection.
+        const creatorData = Array.isArray(node.creator) ? node.creator[0] : node.creator;
+        const nodeCreatorGroupId = creatorData?.parent_admin_id || node.created_by;
 
         if (currentUserRole === 'superadmin') {
           // If superadmin has selected a specific company, filter by that company
@@ -142,11 +143,17 @@ export function useDashboardData() {
   }, [fetchData]);
 
   const filteredNodes = nodes.filter(node => {
-    const matchesSearch = node.locations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          node.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSection = sectionFilter ? node.locations?.description === sectionFilter : true;
+    if (!node) return false;
+    const search = searchQuery.toLowerCase();
+    const locName = (node.locations?.name || '').toLowerCase();
+    const idStr = String(node.id).toLowerCase();
+    const matchesSearch = search === '' || locName.includes(search) || idStr.includes(search);
+    const nodeSection = node.locations?.company_sections?.name || node.locations?.description || '';
+    const matchesSection = sectionFilter === '' || nodeSection === sectionFilter;
     return matchesSearch && matchesSection;
   });
+
+  const dynamicSections = Array.from(new Set(nodes.map(n => n.locations?.company_sections?.name || n.locations?.description).filter(Boolean)));
 
   return {
     nodes,
@@ -164,6 +171,7 @@ export function useDashboardData() {
     setSearchQuery,
     sectionFilter,
     setSectionFilter,
+    dynamicSections,
     fetchData,
     filteredNodes,
     setNodes, // expose setNodes for optimistic updates

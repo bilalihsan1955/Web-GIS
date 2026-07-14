@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, ChevronDown, Edit, Trash2 } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface NodesTableProps {
   userRole: string;
@@ -10,6 +11,7 @@ interface NodesTableProps {
   setSearchQuery: (query: string) => void;
   sectionFilter: string;
   setSectionFilter: (section: string) => void;
+  dynamicSections: string[];
   filteredNodes: any[];
   openEditModal: (node: any) => void;
   openDeleteModal: (nodeId: string, imageUrl: string, locationId: string) => void;
@@ -24,22 +26,24 @@ export default function NodesTable({
   setSearchQuery,
   sectionFilter,
   setSectionFilter,
+  dynamicSections,
   filteredNodes,
   openEditModal,
   openDeleteModal
 }: NodesTableProps) {
+  const { t } = useLanguage();
   const [isSectionFilterOpen, setIsSectionFilterOpen] = useState(false);
 
   return (
     <section>
-      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Spatial Nodes Directory</h2>
+      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">{t('spatialNodesDirectory')}</h2>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
           <input 
             type="text" 
-            placeholder="Search by location name or node ID..."
+            placeholder={t('searchStation')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
@@ -55,7 +59,7 @@ export default function NodesTable({
                 ? 'bg-cyan-50 border-cyan-300 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/50 dark:text-cyan-400' 
                 : 'bg-white/70 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white/90 dark:bg-slate-900/50 dark:border-white/20 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/5'}`}
           >
-            <span className="font-medium text-sm">{sectionFilter || 'All Sections'}</span>
+            <span className="font-medium text-sm">{sectionFilter || t('allSectors')}</span>
             <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isSectionFilterOpen ? 'text-cyan-600 dark:text-cyan-400 rotate-180' : 'text-slate-400'}`} />
           </button>
           
@@ -63,7 +67,7 @@ export default function NodesTable({
             <>
               <div className="fixed inset-0 z-[100]" onClick={() => setIsSectionFilterOpen(false)} />
               <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top">
-                {['', 'Section 1', 'Section 2', 'Section 3', 'Section 4'].map((section) => (
+                {['', ...dynamicSections].map((section) => (
                   <button
                     key={section || 'all'}
                     onClick={() => { setSectionFilter(section); setIsSectionFilterOpen(false); }}
@@ -72,7 +76,7 @@ export default function NodesTable({
                         ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' 
                         : 'text-slate-700 dark:text-slate-300'}`}
                   >
-                    {section || 'All Sections'}
+                    {section || t('allSectors')}
                   </button>
                 ))}
               </div>
@@ -85,14 +89,14 @@ export default function NodesTable({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
-                <th className="px-6 py-5">Preview</th>
-                <th className="px-6 py-5">Location</th>
-                <th className="px-6 py-5">Uploaded By</th>
-                <th className="px-6 py-5">Coordinates</th>
-                <th className="px-6 py-5">Capture Date</th>
-                <th className="px-6 py-5">Status</th>
-                <th className="px-6 py-5 text-right">Actions</th>
+              <tr className="border-b border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
+                <th className="px-6 py-5">{t('image')}</th>
+                <th className="px-6 py-5">{t('name')}</th>
+                <th className="px-6 py-5">{t('uploaded')}</th>
+                <th className="px-6 py-5">{t('coordinates')}</th>
+                <th className="px-6 py-5">{t('captureDate')}</th>
+                <th className="px-6 py-5">{t('status')}</th>
+                <th className="px-6 py-5 text-right">{t('action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/10">
@@ -111,7 +115,7 @@ export default function NodesTable({
               ) : filteredNodes.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    {searchQuery ? 'No nodes found matching your search.' : 'No 360 images found. Upload using the pipeline above.'}
+                    {searchQuery ? t('noNodes') : t('noNodes')}
                   </td>
                 </tr>
               ) : (
@@ -134,11 +138,11 @@ export default function NodesTable({
                     <td className="px-6 py-5">
                       <div className="flex flex-col space-y-1">
                         <span className="text-sm font-semibold text-slate-900 dark:text-white drop-shadow-sm">
-                          {node.locations?.name || 'Unnamed'}
+                          {node.locations?.name || t('unnamed')}
                         </span>
                         {node.locations?.description && (
-                          <span className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 w-fit">
-                            {node.locations.description}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 w-fit">
+                            {node.locations.company_sections?.name || node.locations.description}
                           </span>
                         )}
                       </div>
@@ -163,12 +167,12 @@ export default function NodesTable({
                     </td>
                     <td className="px-6 py-5">
                       {node.is_published ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                          Published
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          {t('published')}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300 border border-slate-300 dark:border-slate-500/30">
-                          Draft
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300 border border-slate-300 dark:border-slate-500/30">
+                          {t('draft')}
                         </span>
                       )}
                     </td>

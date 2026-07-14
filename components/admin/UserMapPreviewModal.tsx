@@ -97,11 +97,13 @@ export default function UserMapPreviewModal({
               const el = document.createElement('div');
               el.className = 'w-4 h-4 bg-cyan-400 border-2 border-white rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]';
               
+              const loc: any = Array.isArray(node.locations) ? node.locations[0] : node.locations;
+              
               const popup = new mapboxgl.Popup({ offset: 15, closeButton: false })
                 .setHTML(`
                   <div class="px-2 py-1">
-                    <div class="text-xs font-bold text-slate-800">${node.locations?.name || 'Unnamed'}</div>
-                    <div class="text-[10px] text-slate-500">${node.locations?.description || ''}</div>
+                    <div class="text-xs font-bold text-slate-800">${loc?.name || 'Unnamed'}</div>
+                    <div class="text-[10px] text-slate-500">${loc?.description || ''}</div>
                   </div>
                 `);
 

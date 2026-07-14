@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check, Layers } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import { useMapStore, ADMIN_SLUG_MAP } from '@/store/useMapStore';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { createClient } from '@/utils/supabase/client';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
 
 export default function MapSidebar() {
   const params = useParams();
@@ -19,11 +21,13 @@ export default function MapSidebar() {
 
   // Edit Profile Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isManageSectionsOpen, setIsManageSectionsOpen] = useState(false);
   const [compName, setCompName] = useState('');
   const [compDesc, setCompDesc] = useState('');
   const [compIcon, setCompIcon] = useState('');
   const [showToast, setShowToast] = useState(false);
   const isDashboard = !adminId;
+  const { t } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -131,6 +135,15 @@ export default function MapSidebar() {
     return Array.from(locMap.values());
   }, [nodes]);
 
+  // Extract sections dynamically from nodes
+  const dynamicSections = useMemo(() => {
+    const sectionSet = new Set<string>();
+    nodes.forEach(node => {
+      if (node.section) sectionSet.add(node.section);
+    });
+    return ['ALL', ...Array.from(sectionSet)];
+  }, [nodes]);
+
   const filteredLocations = useMemo(() => {
     return uniqueLocations.filter(loc => {
       const matchesSearch = loc.locationName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -170,8 +183,7 @@ export default function MapSidebar() {
     }
   };
 
-  const sections = ['ALL', 'Section 1', 'Section 2', 'Section 3'];
-  const getSectionLabel = (sec: string) => sec === 'ALL' ? 'ALL' : sec.replace('Section ', 'SEC ');
+  const getSectionLabel = (sec: string) => sec === 'ALL' ? t('allSectors') : sec;
 
   return (
     <div className={`pointer-events-auto absolute z-20 flex flex-col shadow-none dark:shadow-2xl transition-all duration-300 overflow-hidden bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-slate-200 dark:border-white/10
@@ -215,7 +227,7 @@ export default function MapSidebar() {
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shrink-0"
                   >
                     <Edit3 className="w-3 h-3" />
-                    Edit
+                    {t('editProfile')}
                   </button>
                 )}
               </div>
@@ -230,47 +242,57 @@ export default function MapSidebar() {
         
         {/* Header Section (Desktop only for the title, Mobile already has it in the handle) */}
         <div className="p-6 pb-4">
-          <div className="hidden md:flex items-center gap-3 mb-8 w-full">
-            {isLoadingProfile ? (
-              <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
-            ) : displayIcon ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
-                <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
-              </div>
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
-                <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              </div>
-            )}
-            <div className="flex-1 flex items-center justify-between pr-1">
+          <div className="hidden md:flex flex-col gap-3 mb-8 w-full">
+            <div className="flex items-center gap-3 w-full">
               {isLoadingProfile ? (
-                <div className="flex flex-col gap-1">
-                  <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
-                  <div className="h-3 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+                <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
+              ) : displayIcon ? (
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
+                  <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
                 </div>
               ) : (
-                <>
-                  <div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
+                  <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+              )}
+              <div className="flex-1 pr-1">
+                {isLoadingProfile ? (
+                  <div className="flex flex-col gap-1">
+                    <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+                    <div className="h-3 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
                     <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-2">{displayName}</h1>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{displayDesc}</p>
-                  </div>
-                  {isDashboard && (
-                    <button 
-                      onClick={handleOpenEdit} 
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shrink-0 shadow-sm" 
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      Edit Profile
-                    </button>
-                  )}
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
+            
+            {isDashboard && !isLoadingProfile && (
+              <div className="flex flex-col items-start gap-1.5 w-full">
+                <button 
+                  onClick={handleOpenEdit} 
+                  className="flex items-center justify-center w-full gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shadow-sm" 
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  {t('editProfile')}
+                </button>
+                <button 
+                  onClick={() => setIsManageSectionsOpen(true)} 
+                  className="flex items-center justify-center w-full gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 transition-all shadow-sm" 
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  {t('manageSections')}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-16 items-start mb-6">
             <div>
-              <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-1">Total Nodes</p>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('totalNodes')}</p>
               {isLoading ? (
                 <div className="h-9 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
               ) : (
@@ -278,7 +300,7 @@ export default function MapSidebar() {
               )}
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-1">Project Scale</p>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('projectScale')}</p>
               {isLoading ? (
                 <div className="h-8 w-20 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
               ) : (
@@ -291,7 +313,7 @@ export default function MapSidebar() {
           <div className="relative mb-5">
             <input 
               type="text" 
-              placeholder="Search Station..."
+              placeholder={t('searchStation')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white/60 dark:bg-black/40 backdrop-blur-sm border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg pl-4 pr-10 py-2.5 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
@@ -300,7 +322,7 @@ export default function MapSidebar() {
 
           {/* Filters */}
           <div className="flex flex-wrap gap-2">
-            {sections.map(sec => {
+            {dynamicSections.map(sec => {
               const isActive = activeSection === sec;
               return (
                 <button
@@ -320,7 +342,7 @@ export default function MapSidebar() {
 
         {/* Locations Log */}
         <div className="px-6 pt-2 pb-2">
-          <h2 className="text-[11px] font-bold text-slate-600 dark:text-slate-400 tracking-widest uppercase">LOCATIONS LOG</h2>
+          <h2 className="text-[12px] font-bold text-slate-600 dark:text-slate-400">Log Lokasi</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3 custom-scrollbar">
@@ -357,7 +379,7 @@ export default function MapSidebar() {
 
           {!isLoading && filteredLocations.length === 0 && (
             <div className="text-center text-slate-500 text-sm mt-8">
-              No locations found.
+              {t('noNodes')}
             </div>
           )}
         </div>
@@ -371,11 +393,11 @@ export default function MapSidebar() {
               <X className="w-5 h-5" />
             </button>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-white/10 pb-3">
-              Edit Company Profile
+              {t('editProfile')}
             </h3>
             
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Company Name</label>
+              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Nama Perusahaan</label>
               <input 
                 type="text" 
                 value={compName} 
@@ -386,7 +408,7 @@ export default function MapSidebar() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Description / Tagline</label>
+              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Deskripsi / Tagline</label>
               <input 
                 type="text" 
                 value={compDesc} 
@@ -397,13 +419,13 @@ export default function MapSidebar() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Company Logo</label>
+              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Logo Perusahaan</label>
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
                   {compIcon ? (
                     <img src={compIcon} className="w-full h-full object-cover" alt="Preview" />
                   ) : (
-                    <span className="text-[10px] text-slate-400 text-center leading-tight">No Logo</span>
+                    <span className="text-[10px] text-slate-400 text-center leading-tight">Belum Ada Logo</span>
                   )}
                 </div>
                 <input 
@@ -420,24 +442,31 @@ export default function MapSidebar() {
                 onClick={() => setIsEditModalOpen(false)}
                 className="px-5 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button 
                 onClick={handleSaveProfile}
                 className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
               >
-                Save Changes
+                {t('save')}
               </button>
             </div>
           </div>
         </div>
       , document.body)}
 
+      {isManageSectionsOpen && mounted && document.body && createPortal(
+        <ManageSectionsModal 
+          isOpen={isManageSectionsOpen}
+          onClose={() => setIsManageSectionsOpen(false)}
+        />
+      , document.body)}
+
       {/* Floating Success Toast using Portal */}
       {showToast && mounted && document.body && createPortal(
         <div className="fixed bottom-6 right-6 z-[100000] animate-slide-up flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/30 pointer-events-auto">
           <Check className="w-4 h-4" />
-          Profile updated successfully!
+          Profil berhasil diperbarui!
         </div>
       , document.body)}
 

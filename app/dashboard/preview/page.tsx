@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
-import { Loader2, Share2, Check, Info, Building2 } from 'lucide-react';
+import { Loader2, Share2, Check, Info, Building2, ChevronLeft } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import MapLoadingFallback from '@/components/ui/MapLoadingFallback';
 import MapSidebar from '@/components/ui/MapSidebar';
 import CompanyGrid from '@/components/admin/CompanyGrid';
@@ -25,6 +26,7 @@ const Viewer360 = dynamic(
 );
 
 export default function PreviewPage() {
+  const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -41,7 +43,9 @@ export default function PreviewPage() {
       setUser(user);
       
       // Default fallback in case the API call fails
-      setSlug(user.id);
+      if (user) {
+        setSlug(user.id);
+      }
 
       try {
         const profileRes = await fetch('/api/dashboard/company-profile');
@@ -74,15 +78,19 @@ export default function PreviewPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isRoleLoaded) {
+  if (!isRoleLoaded || loading) {
     return (
-      <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-slate-400 dark:text-slate-500">
-          <svg className="w-8 h-8 animate-spin text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span className="text-sm font-medium">Memuat Pratinjau...</span>
+      <div className="relative h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-inner bg-slate-950 flex animate-pulse">
+        {/* Skeleton Map Background */}
+        <div className="absolute inset-0 w-full h-full z-0 bg-slate-200 dark:bg-slate-800/80"></div>
+        
+        {/* Skeleton Sidebar (Mobile & Desktop) */}
+        <div className="absolute left-0 bottom-0 md:top-0 md:bottom-0 w-full md:w-[340px] h-[70px] md:h-full z-10 bg-white/60 dark:bg-black/40 border-t md:border-t-0 md:border-r border-slate-200 dark:border-white/10 rounded-t-2xl md:rounded-none"></div>
+        
+        {/* Skeleton Buttons */}
+        <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+           <div className="h-11 w-11 rounded-xl bg-slate-300 dark:bg-white/10"></div>
+           <div className="h-11 w-44 rounded-xl bg-slate-300 dark:bg-white/10"></div>
         </div>
       </div>
     );
@@ -101,23 +109,7 @@ export default function PreviewPage() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="relative h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-inner bg-slate-950 flex animate-pulse">
-        {/* Skeleton Map Background */}
-        <div className="absolute inset-0 w-full h-full z-0 bg-slate-200 dark:bg-slate-800/80"></div>
-        
-        {/* Skeleton Sidebar (Mobile & Desktop) */}
-        <div className="absolute left-0 bottom-0 md:top-0 md:bottom-0 w-full md:w-[340px] h-[70px] md:h-full z-10 bg-white/60 dark:bg-black/40 border-t md:border-t-0 md:border-r border-slate-200 dark:border-white/10 rounded-t-2xl md:rounded-none"></div>
-        
-        {/* Skeleton Buttons */}
-        <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-           <div className="h-11 w-11 rounded-xl bg-slate-300 dark:bg-white/10"></div>
-           <div className="h-11 w-44 rounded-xl bg-slate-300 dark:bg-white/10"></div>
-        </div>
-      </div>
-    );
-  }
+
 
   if (!user) {
     return (
@@ -146,9 +138,10 @@ export default function PreviewPage() {
           <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-full pl-2 pr-5 py-2 shadow-xl flex items-center gap-3">
              <button 
               onClick={() => setSelectedCompanyId('all')}
-              className="group w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-full transition-colors"
              >
-              <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              {t('back')}
              </button>
              <div className="w-px h-6 bg-slate-700/50"></div>
              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-slate-800 flex items-center justify-center">
@@ -175,8 +168,8 @@ export default function PreviewPage() {
                 className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-slate-400 bg-slate-800/80 backdrop-blur-md rounded-xl transition-all shadow-inner border border-slate-700/50 cursor-not-allowed"
               >
                 <Share2 className="w-4 h-4 opacity-50" />
-                Share Guest Map
-                <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-slate-700/80 px-2 py-0.5 rounded text-slate-400">Locked</span>
+                {t('shareGuestMap')}
+                <span className="ml-2 text-[11px] font-bold bg-slate-700/80 px-2 py-0.5 rounded text-slate-400">{t('locked')}</span>
               </button>
               
               {/* Notification Box explaining why it is locked */}
@@ -184,7 +177,7 @@ export default function PreviewPage() {
                 <div className="flex gap-2">
                    <div className="text-amber-400 mt-0.5 shrink-0"><Info className="w-4 h-4"/></div>
                    <p className="text-xs text-slate-300 leading-relaxed">
-                     Silakan lengkapi <strong>Profil Perusahaan</strong> di panel kiri untuk membuka fitur Peta Publik.
+                     {t('lockedMsg')}
                    </p>
                 </div>
               </div>
@@ -197,12 +190,12 @@ export default function PreviewPage() {
             {copied ? (
               <>
                 <Check className="w-4 h-4 animate-bounce" />
-                Copied Link!
+                {t('copiedLink')}
               </>
             ) : (
               <>
                 <Share2 className="w-4 h-4" />
-                Share Guest Map
+                {t('shareGuestMap')}
               </>
             )}
             </button>

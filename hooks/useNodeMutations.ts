@@ -17,6 +17,7 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [editLocationName, setEditLocationName] = useState('');
   const [editLocationDescription, setEditLocationDescription] = useState('');
+  const [editLocationSectionId, setEditLocationSectionId] = useState('');
   const [editCaptureDate, setEditCaptureDate] = useState('');
   const [editIsPublished, setEditIsPublished] = useState(true);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
@@ -34,6 +35,7 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
     setSelectedNode(node);
     setEditLocationName(node.locations?.name || '');
     setEditLocationDescription(node.locations?.description || '');
+    setEditLocationSectionId(node.locations?.section_id || '');
     setEditCaptureDate(node.capture_date || '');
     setEditIsPublished(node.is_published);
     setEditImageFile(null);
@@ -122,11 +124,11 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
       if (existingLoc) {
         locId = existingLoc.id;
         // Update the section (description) of the existing location if changed
-        await supabase.from('locations').update({ description: editLocationDescription }).eq('id', locId);
+        await supabase.from('locations').update({ description: editLocationDescription, section_id: editLocationSectionId || null }).eq('id', locId);
       } else {
         const { data: newLoc, error: insertErr } = await supabase
           .from('locations')
-          .insert({ name: editLocationName, slug, description: editLocationDescription })
+          .insert({ name: editLocationName, slug, description: editLocationDescription, section_id: editLocationSectionId || null })
           .select('id')
           .single();
         if (insertErr) throw insertErr;
@@ -227,6 +229,8 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
     setEditLocationName,
     editLocationDescription,
     setEditLocationDescription,
+    editLocationSectionId,
+    setEditLocationSectionId,
     editCaptureDate,
     setEditCaptureDate,
     editIsPublished,

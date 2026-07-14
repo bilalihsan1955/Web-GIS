@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "browser-image-compression": "^2.0.2",
+    "dotenv": "^17.4.2",
     "exifr": "^7.1.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.21.0",

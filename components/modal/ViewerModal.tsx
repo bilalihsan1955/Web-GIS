@@ -58,7 +58,7 @@ export default function ViewerModal() {
       }}
       role="dialog"
       aria-modal="true"
-      aria-label={`Viewer: ${properties.name}`}
+      aria-label={`Viewer: ${properties.locationName}`}
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -74,7 +74,7 @@ export default function ViewerModal() {
               </div>
               <div>
                 <h2 className="text-base font-semibold text-text-primary">
-                  {properties.name}
+                  {properties.locationName}
                 </h2>
                 <p className="text-[11px] text-text-muted font-mono">
                   {coordinates[1].toFixed(4)}°, {coordinates[0].toFixed(4)}°
@@ -107,7 +107,7 @@ export default function ViewerModal() {
                   Description
                 </p>
                 <p className="text-sm text-text-primary leading-relaxed">
-                  {properties.description}
+                  {properties.section || '-'}
                 </p>
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function ViewerModal() {
                   Category
                 </p>
                 <span className="inline-flex items-center rounded-md bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan ring-1 ring-inset ring-accent-cyan/20">
-                  {properties.category}
+                  {properties.locationGroup}
                 </span>
               </div>
             </div>

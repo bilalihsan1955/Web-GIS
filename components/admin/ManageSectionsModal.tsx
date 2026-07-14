@@ -1,0 +1,186 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { X, Plus, Trash2, Loader2, Layers } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+
+type Section = {
+  id: string;
+  name: string;
+};
+
+export default function ManageSectionsModal({ 
+  isOpen, 
+  onClose,
+  adminId
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  adminId?: string; // If passed, fetch sections for this admin. If not, use logged in user's group.
+}) {
+  const { t } = useLanguage();
+  const [sections, setSections] = useState<Section[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchSections();
+    }
+  }, [isOpen]);
+
+  const fetchSections = async () => {
+    setLoading(true);
+    try {
+      // Because we have RLS "Users can read group sections"
+      // it should automatically return sections belonging to the user's admin group.
+      // If we are superadmin, we might need to filter by adminId if provided.
+      let query = supabase.from('company_sections').select('*').order('created_at', { ascending: true });
+      if (adminId) {
+        query = query.eq('created_by', adminId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setSections(data || []);
+    } catch (err) {
+      console.error('Error fetching sections:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddSection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSectionName.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
+
+      let creatorId = userData.user.id;
+      // If adminId is provided, and we are superadmin, create on behalf of adminId
+      if (adminId) {
+        creatorId = adminId;
+      }
+
+      const { data, error } = await supabase
+        .from('company_sections')
+        .insert([{ name: newSectionName.trim(), created_by: creatorId }])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      if (data) {
+        setSections([...sections, data]);
+        setNewSectionName('');
+      }
+    } catch (err) {
+      console.error('Error adding section:', err);
+      alert('Gagal menambah sektor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSection = async (id: string) => {
+    if (!confirm(t('confirm') + '?')) return;
+    try {
+      const { error } = await supabase
+        .from('company_sections')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      setSections(sections.filter(s => s.id !== id));
+    } catch (err) {
+      console.error('Error deleting section:', err);
+      alert('Gagal menghapus sektor');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[99999] bg-slate-900/40 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up relative">
+        
+        {/* Header */}
+        <div className="bg-slate-50 dark:bg-black/20 px-6 py-5 border-b border-slate-200 dark:border-white/10 relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            {t('manageSections')}
+          </h2>
+        </div>
+
+        {/* Body */}
+        <div className="p-6">
+          <form onSubmit={handleAddSection} className="flex gap-2">
+            <input 
+              type="text" 
+              value={newSectionName} 
+              onChange={(e) => setNewSectionName(e.target.value)}
+              placeholder={t('sectionName')}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+              disabled={isSubmitting}
+            />
+            <button 
+              type="submit"
+              disabled={isSubmitting || !newSectionName.trim()}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            </button>
+          </form>
+
+          <div className="flex flex-col gap-2 mt-4 max-h-[250px] overflow-y-auto custom-scrollbar">
+            {loading ? (
+              <div className="flex justify-center p-4">
+                <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
+              </div>
+            ) : sections.length === 0 ? (
+              <div className="text-center p-4 text-sm text-slate-500 dark:text-slate-400">
+                {t('noSections')}
+              </div>
+            ) : (
+              sections.map(section => (
+                <div key={section.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{section.name}</span>
+                  <button 
+                    onClick={() => handleDeleteSection(section.id)}
+                    className="text-slate-400 hover:text-rose-500 transition-colors p-1"
+                    title={t('delete')}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.2);
+        }
+      `}</style>
+    </div>
+  );
+}

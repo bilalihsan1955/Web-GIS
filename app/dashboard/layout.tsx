@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { LayoutDashboard, Users, LogOut, Image as ImageIcon, Loader2, Map } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Image as ImageIcon, Loader2, Map, Globe2 } from 'lucide-react';
 import Link from 'next/link';
 import LogoutButton from '@/components/auth/LogoutButton';
 import ThemeToggle from '@/components/ThemeToggle';
+import LanguageToggle from '@/components/LanguageToggle';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -105,7 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
           >
             <LayoutDashboard className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard' ? 'text-cyan-400' : ''}`} />
-            Overview
+            {t('overview')}
           </Link>
           
           {isLoadingRole && (
@@ -121,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/preview' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
             >
               <Map className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/preview' ? 'text-cyan-400' : ''}`} />
-              Map Preview
+              {t('mapPreview')}
             </Link>
           )}
 
@@ -131,14 +134,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/users' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
             >
               <Users className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/users' ? 'text-cyan-400' : ''}`} />
-              User Management
+              {t('userManagement')}
             </Link>
           )}
         </nav>
         
-        {/* THEME TOGGLE */}
+        {/* TOGGLES */}
         <div className="px-6 pb-6 mt-auto">
-          <ThemeToggle />
+          <div className="bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl flex items-center justify-between shadow-sm">
+            <ThemeToggle />
+            <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+            <LanguageToggle />
+          </div>
         </div>
       </aside>
 
@@ -149,12 +156,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="h-20 m-4 mb-0 px-8 rounded-2xl bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-none dark:shadow-lg flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-lg">
             {pathname === '/dashboard' 
-              ? 'Dashboard Overview' 
+              ? `Dashboard ${t('overview')}` 
               : pathname.includes('users') 
-                ? 'User Management' 
+                ? t('userManagement') 
                 : pathname.includes('preview')
-                  ? 'Map Preview'
-                  : 'Admin Area'}
+                  ? t('mapPreview')
+                  : t('adminArea')}
           </h2>
           
           <div className="flex items-center space-x-6">
@@ -167,7 +174,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ) : (
                 <>
                   <span className="text-sm font-medium text-slate-800 dark:text-white drop-shadow-sm dark:drop-shadow-md">{user?.email}</span>
-                  <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize ${
                     role === 'superadmin' 
                       ? 'bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.1)]'
                       : role === 'admin' 

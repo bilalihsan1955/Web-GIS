@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createClient } from '@/utils/supabase/client';
 import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown, Map } from 'lucide-react';
 import UserMapPreviewModal from '@/components/admin/UserMapPreviewModal';
@@ -16,6 +17,7 @@ interface AppUser {
 }
 
 export default function UsersManagementPage() {
+  const { t, language } = useLanguage();
   const supabase = createClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [userRole, setUserRole] = useState<string>('user');
@@ -200,7 +202,7 @@ export default function UsersManagementPage() {
         <div className="bg-red-500/20 border border-red-500/30 p-6 rounded-full mb-6 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
           <ShieldAlert className="h-16 w-16 text-red-400" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 drop-shadow-sm dark:drop-shadow-md">Access Denied</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 drop-shadow-sm dark:drop-shadow-md">{t('accessDenied') || 'Access Denied'}</h1>
         <p className="text-slate-300 max-w-md mx-auto">
           You do not have the required Super Admin privileges to view or manage system users.
         </p>
@@ -212,7 +214,7 @@ export default function UsersManagementPage() {
     <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
       <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Create New User</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('createNewUser') || 'Create New User'}</h3>
           <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
             <X className="w-6 h-6" />
           </button>
@@ -224,11 +226,11 @@ export default function UsersManagementPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Email Address</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('emailAddress') || 'Email Address'}</label>
             <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Temporary Password</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('temporaryPassword') || 'Temporary Password'}</label>
             <div className="relative">
               <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
               <button 
@@ -241,29 +243,29 @@ export default function UsersManagementPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('systemRole') || 'System Role'}</label>
           {userRole === 'superadmin' ? (
             <div>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
-                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Super Admin (System Access)</option>
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('admin360') || 'Admin (360 Map Management)'}</option>
+                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
               </select>
             </div>
           ) : (
             <div>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Co-Admin (Manage Group Maps)</option>
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
               </select>
             </div>
           )}
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
+            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">{t('cancel') || 'Cancel'}</button>
             <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              Create Account
+              {t('createNewUser') || 'Create Account'}
             </button>
           </div>
         </form>
@@ -275,7 +277,7 @@ export default function UsersManagementPage() {
     <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
       <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Edit User Role</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('editUserRole') || 'Edit User Role'}</h3>
           <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
             <X className="w-6 h-6" />
           </button>
@@ -287,33 +289,33 @@ export default function UsersManagementPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">Account Email</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('accountEmail') || 'Account Email'}</label>
             <input type="text" value={selectedUser.email} disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('systemRole') || 'System Role'}</label>
           {userRole === 'superadmin' ? (
             <div>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
-                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Super Admin (System Access)</option>
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('admin360') || 'Admin (360 Map Management)'}</option>
+                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
               </select>
             </div>
           ) : (
             <div>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Co-Admin (Manage Group Maps)</option>
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
               </select>
             </div>
           )}
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">Cancel</button>
+            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">{t('cancel') || 'Cancel'}</button>
             <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              Save Changes
+              {t('saveChanges') || 'Save Changes'}
             </button>
           </div>
         </form>
@@ -328,7 +330,7 @@ export default function UsersManagementPage() {
           <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30 mb-2">
             <Trash2 className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Confirm Deletion</h3>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('confirmDeletion') || 'Confirm Deletion'}</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 drop-shadow-sm leading-relaxed">
             Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
           </p>
@@ -345,7 +347,7 @@ export default function UsersManagementPage() {
               disabled={modalLoading}
               className="flex-1 px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t('cancel') || 'Cancel'}
             </button>
             <button 
               onClick={confirmDeleteUser}
@@ -353,7 +355,7 @@ export default function UsersManagementPage() {
               className="flex-1 px-5 py-2.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-red-500/10"
             >
               {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              Delete
+              {t('delete') || 'Delete'}
             </button>
           </div>
         </div>
@@ -385,7 +387,7 @@ export default function UsersManagementPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
           <input 
             type="text" 
-            placeholder="Search users by email or role..."
+            placeholder={t('searchUsers') || 'Search users by email or role...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
@@ -435,7 +437,7 @@ export default function UsersManagementPage() {
           className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-none dark:shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0 h-[46px]"
         >
           <Plus className="w-5 h-5 mr-2 shrink-0" />
-          Tambah User
+          {t('addNewUser') || 'Add New User'}
         </button>
       </div>
 
@@ -444,12 +446,12 @@ export default function UsersManagementPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
-                <th className="px-6 py-5">Account Email</th>
-                <th className="px-6 py-5">System Role</th>
-                {userRole === 'superadmin' && <th className="px-6 py-5">Parent Admin</th>}
-                <th className="px-6 py-5">Joined Date</th>
-                <th className="px-6 py-5 text-right">Actions</th>
+              <tr className="border-b border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
+                <th className="px-6 py-5">{t('accountEmail') || 'Account Email'}</th>
+                <th className="px-6 py-5">{t('systemRole') || 'System Role'}</th>
+                {userRole === 'superadmin' && <th className="px-6 py-5">{t('parentAdmin') || 'Parent Admin'}</th>}
+                <th className="px-6 py-5">{t('joinedDate') || 'Joined Date'}</th>
+                <th className="px-6 py-5 text-right">{t('actions') || 'Actions'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -466,7 +468,7 @@ export default function UsersManagementPage() {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={userRole === 'superadmin' ? 5 : 4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    {searchQuery ? 'No users found matching your search.' : 'No users found.'}
+                    {searchQuery ? (t('noUsersFoundSearch') || 'No users found matching your search.') : (t('noUsersFound') || 'No users found.')}
                   </td>
                 </tr>
               ) : filteredUsers.map((u) => (
@@ -476,7 +478,7 @@ export default function UsersManagementPage() {
                     {u.email}
                   </td>
                   <td className="px-6 py-5">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold capitalize ${
                       u.role === 'admin' ? 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30' : 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                     }`}>
                       {u.role}
@@ -488,7 +490,7 @@ export default function UsersManagementPage() {
                     </td>
                   )}
                   <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 drop-shadow-sm">
-                    {new Date(u.created_at).toLocaleDateString()}
+                    {new Date(u.created_at).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end space-x-3">
@@ -496,19 +498,19 @@ export default function UsersManagementPage() {
                         onClick={() => openMapPreview(u)}
                         className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
-                        <Map className="w-4 h-4 mr-1.5" /> Preview
+                        <Map className="w-4 h-4 mr-1.5" /> {t('preview') || 'Preview'}
                       </button>
                       <button 
                         onClick={() => openEditModal(u)}
                         className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
-                        <Edit className="w-4 h-4 mr-1.5" /> Edit
+                        <Edit className="w-4 h-4 mr-1.5" /> {t('edit') || 'Edit'}
                       </button>
                       <button 
                         onClick={() => openDeleteModal(u)}
                         className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
                       >
-                        <Trash2 className="w-4 h-4 mr-1.5" /> Delete
+                        <Trash2 className="w-4 h-4 mr-1.5" /> {t('delete') || 'Delete'}
                       </button>
                     </div>
                   </td>

@@ -1,4 +1,5 @@
 import { Building2, ChevronRight, Mail, Map } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface CompanyGridProps {
   adminGroups: { user_id: string; company_name: string | null; email: string, company_logo: string | null }[];
@@ -7,17 +8,14 @@ interface CompanyGridProps {
 }
 
 export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyGridProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-cyan-500" />
-            Direktori Perusahaan (Klien)
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Pilih salah satu perusahaan di bawah ini untuk masuk ke mode kelola dan mengunggah peta untuk mereka.
-          </p>
+            <Building2 className="w-6 h-6 text-cyan-500" />{t('companyDirectory') || 'Direktori Perusahaan (Klien)'}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('companyDirectoryDesc') || 'Pilih salah satu perusahaan di bawah ini untuk masuk ke mode kelola dan mengunggah peta untuk mereka.'}</p>
         </div>
       </div>
 
@@ -59,7 +57,7 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">
-                  {group.company_name || 'Tanpa Nama'}
+                  {group.company_name || t('unnamed') || 'Tanpa Nama'}
                 </h3>
                 <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                   <Mail className="w-3 h-3 mr-1.5 shrink-0" />
@@ -70,9 +68,7 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
 
             <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
               <span className="inline-flex items-center text-xs font-semibold text-cyan-600 dark:text-cyan-400">
-                <Map className="w-3.5 h-3.5 mr-1.5" />
-                Kelola Peta
-              </span>
+                <Map className="w-3.5 h-3.5 mr-1.5" />{t('manageMap') || 'Kelola Peta'}</span>
               <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-white transition-colors duration-300">
                 <ChevronRight className="w-4 h-4" />
               </div>
@@ -81,9 +77,7 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
           ))
         )}
         {!loading && adminGroups.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/20 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
-            Belum ada Klien (Admin) yang terdaftar.
-          </div>
+          <div className="col-span-full py-12 text-center text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/20 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">{t('noClients') || 'Belum ada Klien (Admin) yang terdaftar.'}</div>
         )}
       </div>
     </div>

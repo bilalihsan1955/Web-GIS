@@ -59,7 +59,7 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
-      "computedHash": "d4f0d4ff9f1ebfd86fd3cdde3caf7b73234f2281e5bbeb2d4eb905b274ae7208"
+      "computedHash": "a0de0cab25a37c9a1a787aa4b690b1f7cfaa6d7ac83a8424f66863b457d9d668"
     },
     "internal-comms": {
       "source": "anthropics/skills",
@@ -138,6 +138,12 @@
       "sourceType": "github",
       "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
       "computedHash": "992ab1e874c4f4159aa18d4ff45d1c3f86f322f0bd2a6744cc32f7d6147f9f06"
+    },
+    "taste-design": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/stitch-utilities/skills/taste-design/SKILL.md",
+      "computedHash": "3772ea408777070865890e10d693118baa1e1de14ee5bacdf6ab46fdea7359bb"
     },
     "theme-factory": {
       "source": "anthropics/skills",

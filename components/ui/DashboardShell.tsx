@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { MAPBOX_STYLE } from '@/lib/constants';
 import MapSidebar from './MapSidebar';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 /**
  * Absolute-positioned glassmorphism overlay panels sitting on top of the map.
@@ -24,6 +25,7 @@ import MapSidebar from './MapSidebar';
  *  └─────────────────────────────────────────┘
  */
 export default function DashboardShell() {
+  const { t } = useLanguage();
   const mapInstance = useDashboardStore((s) => s.mapInstance);
   const isSatellite = useDashboardStore((s) => s.isSatellite);
   const setIsSatellite = useDashboardStore((s) => s.setIsSatellite);
@@ -51,15 +53,7 @@ export default function DashboardShell() {
         {/* ── Top Row ──────────────────────────────────────────────── */}
         <div className="flex items-start justify-end gap-4">
           {/* Quick action buttons */}
-          <Link
-            href="/dashboard/login"
-            className="glass-panel pointer-events-auto animate-slide-up flex h-9 px-4 items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all bg-white/80 dark:bg-black/40 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow hover:bg-slate-50 dark:hover:bg-white/10 active:scale-[0.98]"
-            style={{ animationDelay: '40ms' }}
-          >
-            <LogIn className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
-            Login
-          </Link>
-          
+
           <div
             className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5"
             style={{ animationDelay: '80ms' }}
@@ -95,13 +89,13 @@ export default function DashboardShell() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-xs text-text-secondary">System Online</span>
+            <span className="text-xs text-text-secondary">{t('systemOnline')}</span>
           </div>
           <div className="h-3 w-px bg-white/10" />
           <div className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5 text-text-muted" />
             <span className="text-xs tabular-nums text-text-muted">
-              25 nodes active
+              25 {t('nodesActive')}
             </span>
           </div>
         </div>

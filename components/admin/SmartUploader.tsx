@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client';
 import imageCompression from 'browser-image-compression';
 import exifr from 'exifr';
 import { UploadCloud, CheckCircle2, XCircle, Loader2, MapPin, X, Calendar, Edit, AlertTriangle, ChevronDown } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface FileProgress {
   id: string;
@@ -22,20 +23,38 @@ interface FileProgress {
 }
 
 export default function SmartUploader({ onUploadComplete, assignToGroupId }: { onUploadComplete?: () => void, assignToGroupId?: string }) {
+  const { t } = useLanguage();
   const supabase = createClient();
   const [filesProgress, setFilesProgress] = useState<FileProgress[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [sections, setSections] = useState<{id: string, name: string}[]>([]);
+  const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
+
+  const fetchSections = useCallback(async () => {
+    let query = supabase.from('company_sections').select('id, name').order('created_at', { ascending: true });
+    if (assignToGroupId) {
+      query = query.eq('created_by', assignToGroupId);
+    }
+    const { data } = await query;
+    if (data) setSections(data);
+  }, [assignToGroupId, supabase]);
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    fetchSections();
+  }, [fetchSections]);
+
+  useEffect(() => {
+    if (isSectionDropdownOpen) {
+      fetchSections();
+    }
+  }, [isSectionDropdownOpen, fetchSections]);
 
   // Modal State for Finalizing Details
   const [activeDetailsFileId, setActiveDetailsFileId] = useState<string | null>(null);
   const [locationName, setLocationName] = useState('');
-  const [locationDescription, setLocationDescription] = useState('');
-  const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
+  const [locationSectionId, setLocationSectionId] = useState('');
   const [editCaptureDate, setEditCaptureDate] = useState('');
 
   // Automatically pop the Details modal if a file is waiting and no modal is currently open
@@ -46,7 +65,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         setActiveDetailsFileId(nextFile.id);
         setEditCaptureDate(nextFile.extractedData?.captureDate || '');
         setLocationName('');
-        setLocationDescription('');
+        setLocationSectionId('');
         setIsSectionDropdownOpen(false);
       }
     }
@@ -166,11 +185,11 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
 
       if (existingLoc) {
         locId = existingLoc.id;
-        // Optionally update description if the location already exists and user selected a new section
-        if (locationDescription) {
+        // Optionally update section if the location already exists
+        if (locationSectionId) {
           await supabase
             .from('locations')
-            .update({ description: locationDescription })
+            .update({ section_id: locationSectionId })
             .eq('id', locId);
         }
       } else {
@@ -179,7 +198,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
           .insert({ 
             name: locationName, 
             slug, 
-            description: locationDescription, 
+            section_id: locationSectionId || null, 
             created_by: assignToGroupId || sessionData.session.user.id 
           })
           .select('id')
@@ -313,7 +332,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
               <img src={activeFileDetails.extractedData?.publicUrl} alt="Preview" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 space-y-1">
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">File Name</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">File Name</p>
               <p className="text-sm text-slate-800 dark:text-slate-300 truncate w-48 font-medium">{activeFileDetails.file.name}</p>
               
               <div className="pt-2 flex items-center gap-4 text-xs font-mono text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-slate-200 dark:border-white/5 backdrop-blur-sm">
@@ -326,11 +345,11 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-2 flex items-center">
-                <MapPin className="w-4 h-4 mr-2" /> Nama Lokasi
+                <MapPin className="w-4 h-4 mr-2" /> {t('locationName')}
               </label>
               <input 
                 type="text"
-                placeholder="Masukkan nama lokasi..."
+                placeholder={t('locationName') + '...'}
                 value={locationName}
                 onChange={(e) => setLocationName(e.target.value)}
                 className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm"
@@ -339,7 +358,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
 
             <div className="relative">
               <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-2 flex items-center">
-                <MapPin className="w-4 h-4 mr-2" /> Section Category
+                <MapPin className="w-4 h-4 mr-2" /> {t('locationDesc')}
               </label>
               <div className="relative">
                 <button
@@ -348,8 +367,8 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                   className={`w-full bg-white/60 dark:bg-black/40 border flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all shadow-none dark:shadow-inner outline-none backdrop-blur-sm
                     ${isSectionDropdownOpen ? 'border-cyan-500/50 ring-2 ring-cyan-500/20 text-slate-900 dark:text-white' : 'border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:border-slate-300 dark:hover:border-white/20'}`}
                 >
-                  <span className={locationDescription ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-500 dark:text-white/30'}>
-                    {locationDescription || 'Pilih Section...'}
+                  <span className={locationSectionId ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-500 dark:text-white/30'}>
+                    {locationSectionId ? sections.find(s => s.id === locationSectionId)?.name : 'Pilih Sektor...'}
                   </span>
                   <ChevronDown className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-300 ${isSectionDropdownOpen ? 'rotate-180 text-cyan-600 dark:text-cyan-400' : ''}`} />
                 </button>
@@ -360,21 +379,27 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                       className="fixed inset-0 z-[100]" 
                       onClick={() => setIsSectionDropdownOpen(false)}
                     />
-                    <div className="absolute z-[101] w-full mt-2 bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top">
-                      {['Section 1', 'Section 2', 'Section 3', 'Section 4'].map((section) => (
-                        <button
-                          key={section}
-                          type="button"
-                          onClick={() => {
-                            setLocationDescription(section);
-                            setIsSectionDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
-                            ${locationDescription === section ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}
-                        >
-                          {section}
-                        </button>
-                      ))}
+                    <div className="absolute z-[101] w-full mt-2 bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top max-h-48 overflow-y-auto">
+                      {sections.length === 0 ? (
+                        <div className="p-4 text-sm text-center text-slate-500">
+                          {t('noSections')}
+                        </div>
+                      ) : (
+                        sections.map((section) => (
+                          <button
+                            key={section.id}
+                            type="button"
+                            onClick={() => {
+                              setLocationSectionId(section.id);
+                              setIsSectionDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
+                              ${locationSectionId === section.id ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}
+                          >
+                            {section.name}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </>
                 )}
@@ -400,14 +425,14 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
             onClick={handleCancel} 
             className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"
           >
-            Cancel
+            {t('cancel')}
           </button>
           <button 
             onClick={saveNodeToDatabase}
             disabled={!locationName.trim()}
             className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-all flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10"
           >
-            Save & Submit
+            {t('save')}
           </button>
         </div>
       </div>
@@ -463,7 +488,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                 <div className="flex-1 min-w-0 mr-6">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate pr-4 drop-shadow-sm">{fp.file.name}</p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    <span className={`text-[11px] font-bold capitalize ${
                       fp.status === 'error' ? 'text-red-400' : 
                       fp.status === 'success' ? 'text-emerald-400' : 
                       fp.status === 'needs_details' ? 'text-amber-400' :

@@ -163,10 +163,22 @@ export const useMapStore = create<MapState>((set, get) => ({
       return;
     }
 
+    const seenCoords = new Set<string>();
+
     const mappedNodes: PhotoNode[] = fetchedData.map((item: any) => {
       // Handle difference between direct table select and RPC return formats
       const locationName = adminId ? item.location_name : (item.locations?.name || 'Unknown Location');
       const locationDesc = adminId ? item.location_description : (item.locations?.description || '');
+
+      let lng = item.longitude;
+      let lat = item.latitude;
+      let coordKey = `${lng},${lat}`;
+      while (seenCoords.has(coordKey)) {
+        lng += (Math.random() - 0.5) * 0.0001;
+        lat += (Math.random() - 0.5) * 0.0001;
+        coordKey = `${lng},${lat}`;
+      }
+      seenCoords.add(coordKey);
 
       return {
         id: item.id.toString(),
@@ -174,7 +186,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         locationName: locationName,
         section: locationDesc,
         image_url: item.image_url,
-        coordinates: [item.longitude, item.latitude],
+        coordinates: [lng, lat],
         captureDate: item.capture_date || '',
       };
     });
