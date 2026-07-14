@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/utils/supabase/client';
-import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown } from 'lucide-react';
+import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown, Map } from 'lucide-react';
+import UserMapPreviewModal from '@/components/admin/UserMapPreviewModal';
 
 interface AppUser {
   id: string;
@@ -26,9 +27,11 @@ export default function UsersManagementPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isMapPreviewOpen, setIsMapPreviewOpen] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
+  const [previewUser, setPreviewUser] = useState<AppUser | null>(null);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -185,6 +188,11 @@ export default function UsersManagementPage() {
     setIsEditModalOpen(true);
   };
 
+  const openMapPreview = (u: AppUser) => {
+    setPreviewUser(u);
+    setIsMapPreviewOpen(true);
+  };
+
 
   if (isAdmin === false) {
     return (
@@ -236,7 +244,6 @@ export default function UsersManagementPage() {
             <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
           {userRole === 'superadmin' ? (
             <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
                 <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
                 <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
@@ -245,8 +252,10 @@ export default function UsersManagementPage() {
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
-              <input type="text" value="User (Standard Access)" disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
+              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Co-Admin (Manage Group Maps)</option>
+              </select>
             </div>
           )}
           </div>
@@ -285,7 +294,6 @@ export default function UsersManagementPage() {
             <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
           {userRole === 'superadmin' ? (
             <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
                 <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
                 <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Admin (360 Map Management)</option>
@@ -294,8 +302,10 @@ export default function UsersManagementPage() {
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">System Role</label>
-              <input type="text" value="User (Standard Access)" disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
+              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
+                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">User (Standard Access)</option>
+                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Co-Admin (Manage Group Maps)</option>
+              </select>
             </div>
           )}
           </div>
@@ -483,6 +493,12 @@ export default function UsersManagementPage() {
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end space-x-3">
                       <button 
+                        onClick={() => openMapPreview(u)}
+                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
+                      >
+                        <Map className="w-4 h-4 mr-1.5" /> Preview
+                      </button>
+                      <button 
                         onClick={() => openEditModal(u)}
                         className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
@@ -507,6 +523,15 @@ export default function UsersManagementPage() {
       {isMounted && document.body && createPortal(createModalContent, document.body)}
       {isMounted && document.body && createPortal(editModalContent, document.body)}
       {isMounted && document.body && createPortal(deleteModalContent, document.body)}
+      {isMounted && document.body && createPortal(
+        <UserMapPreviewModal 
+          isOpen={isMapPreviewOpen} 
+          onClose={() => setIsMapPreviewOpen(false)} 
+          userId={previewUser?.id || ''} 
+          userEmail={previewUser?.email || ''} 
+        />, 
+        document.body
+      )}
 
     </div>
   );

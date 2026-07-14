@@ -27,12 +27,18 @@ interface DashboardState {
   mapInstance: mapboxgl.Map | null;
   isSatellite: boolean;
 
+  // ── Session & Role ──────────────────────────────────────────────────
+  userRole: string | null;
+  selectedCompanyId: string;
+
   // ── Actions ─────────────────────────────────────────────────────────
   openModal: (feature: SelectedFeature) => void;
   closeModal: () => void;
   setMapView: (center: [number, number], zoom: number) => void;
   setMapInstance: (map: mapboxgl.Map | null) => void;
   setIsSatellite: (val: boolean) => void;
+  setUserRole: (role: string) => void;
+  setSelectedCompanyId: (id: string) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -42,6 +48,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   mapZoom: 4,
   mapInstance: null,
   isSatellite: true,
+  userRole: null,
+  selectedCompanyId: 'all',
 
   openModal: (feature) =>
     set({ isModalOpen: true, selectedFeature: feature }),
@@ -57,4 +65,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   setIsSatellite: (val) =>
     set({ isSatellite: val }),
+
+  setUserRole: (role) => 
+    set({ userRole: role }),
+
+  setSelectedCompanyId: (id) =>
+    set({ selectedCompanyId: id }),
 }));

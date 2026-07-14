@@ -130,12 +130,10 @@ export const useMapStore = create<MapState>((set, get) => ({
     let fetchedData: any[] = [];
     let fetchError: any = null;
 
-    const resolvedAdminId = adminId ? (ADMIN_SLUG_MAP[adminId] || adminId) : undefined;
-
-    if (resolvedAdminId) {
-      // Fetch via RPC for specific admin group
+    if (adminId) {
+      // Fetch via RPC for specific admin group using the slug (or UUID if slug doesn't exist)
       const { data, error } = await supabase.rpc('get_nodes_for_admin_group', {
-        admin_uuid: resolvedAdminId,
+        admin_identifier: adminId,
       });
       fetchedData = data || [];
       fetchError = error;

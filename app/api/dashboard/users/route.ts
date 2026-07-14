@@ -8,13 +8,14 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+    const { data: roleData } = await supabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
     if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
 
     const requesterRole = roleData.role;
     const requesterId = user.id;
+    const targetGroupId = roleData.parent_admin_id || requesterId; // The Owner's ID for this group
     const adminSupabase = createAdminClient();
     
     // 1. Get all users from Auth API
@@ -40,8 +41,8 @@ export async function GET() {
     }).filter((u) => {
       if (requesterRole === 'superadmin') return true;
       if (requesterRole === 'admin') {
-        // Admins only see users that belong to them
-        return u.parent_admin_id === requesterId;
+        // Admins only see users that belong to their group (including the owner, co-admins, and users)
+        return u.parent_admin_id === targetGroupId || u.id === targetGroupId;
       }
       return false;
     });
@@ -86,18 +87,25 @@ export async function DELETE(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+    const { data: roleData } = await supabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
     if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
 
     const { userId } = await req.json();
     const adminSupabase = createAdminClient();
+    const targetGroupId = roleData.parent_admin_id || user.id;
 
-    // If requester is admin, verify target user belongs to them
+    // If requester is admin, verify target user belongs to their group
     if (roleData.role === 'admin') {
       const { data: targetRole } = await adminSupabase.from('user_roles').select('parent_admin_id').eq('user_id', userId).single();
-      if (targetRole?.parent_admin_id !== user.id) {
+      
+      // Co-Admins or Owners can delete users in their group, BUT cannot delete the Company Owner
+      if (userId === targetGroupId) {
+         return NextResponse.json({ error: 'Forbidden: Cannot delete the Company Owner' }, { status: 403 });
+      }
+
+      if (targetRole?.parent_admin_id !== targetGroupId) {
         return NextResponse.json({ error: 'Forbidden: You can only delete users in your group' }, { status: 403 });
       }
     }

@@ -21,7 +21,7 @@ interface FileProgress {
   };
 }
 
-export default function SmartUploader({ onUploadComplete }: { onUploadComplete?: () => void }) {
+export default function SmartUploader({ onUploadComplete, assignToGroupId }: { onUploadComplete?: () => void, assignToGroupId?: string }) {
   const supabase = createClient();
   const [filesProgress, setFilesProgress] = useState<FileProgress[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -176,7 +176,12 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
       } else {
         const { data: newLoc, error: locErr } = await supabase
           .from('locations')
-          .insert({ name: locationName, slug, description: locationDescription })
+          .insert({ 
+            name: locationName, 
+            slug, 
+            description: locationDescription, 
+            created_by: assignToGroupId || sessionData.session.user.id 
+          })
           .select('id')
           .single();
         if (locErr) throw locErr;
@@ -191,7 +196,8 @@ export default function SmartUploader({ onUploadComplete }: { onUploadComplete?:
           latitude: file.extractedData.latitude,
           image_url: file.extractedData.publicUrl,
           is_published: true,
-          capture_date: editCaptureDate || null
+          capture_date: editCaptureDate || null,
+          created_by: assignToGroupId || sessionData.session.user.id
         });
 
       if (dbError) throw new Error(dbError.message);

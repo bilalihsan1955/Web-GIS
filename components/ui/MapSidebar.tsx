@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ChevronUp, ChevronDown, Radio } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import { useMapStore, ADMIN_SLUG_MAP } from '@/store/useMapStore';
 import { useDashboardStore } from '@/store/useDashboardStore';
@@ -13,32 +14,100 @@ export default function MapSidebar() {
   const companyProfiles = useMapStore((s) => s.companyProfiles);
   const [userId, setUserId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [profile, setProfile] = useState<{company_name?: string, company_description?: string, company_logo?: string} | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Edit Profile Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [compName, setCompName] = useState('');
+  const [compDesc, setCompDesc] = useState('');
+  const [compIcon, setCompIcon] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const isDashboard = !adminId;
 
   useEffect(() => {
     setMounted(true);
     const supabase = createClient();
-    async function getSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
+    async function getSessionAndProfile() {
+      if (adminId) {
+        // We are on the public guest page, fetch using public API
+        try {
+          const res = await fetch(`/api/public/company-profile?slug=${adminId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile) setProfile(data.profile);
+          }
+        } catch (err) {
+          console.error('Error fetching public profile:', err);
+        }
+      } else {
+        // We are inside the dashboard, fetch using dashboard API
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+          try {
+            const res = await fetch('/api/dashboard/company-profile');
+            if (res.ok) {
+              const data = await res.json();
+              if (data.profile) setProfile(data.profile);
+            }
+          } catch (err) {
+            console.error('Error fetching dashboard profile:', err);
+          }
+        }
+      }
+      setIsLoadingProfile(false);
+    }
+    getSessionAndProfile();
+  }, [adminId]);
+
+  const handleOpenEdit = () => {
+    setCompName(profile?.company_name || '');
+    setCompDesc(profile?.company_description || '');
+    setCompIcon(profile?.company_logo || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload-logo', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) setCompIcon(data.url);
+        else alert('Gagal mengupload logo: ' + data.error);
+      } catch (err) {
+        alert('Gagal mengupload logo.');
       }
     }
-    getSession();
-  }, []);
+  };
 
-  // Find slug for the logged-in user if we are in preview mode (where URL adminId is undefined)
-  const slug = useMemo(() => {
-    if (adminId) return adminId;
-    if (!userId) return null;
-    return Object.keys(ADMIN_SLUG_MAP).find(
-      (key) => ADMIN_SLUG_MAP[key] === userId
-    ) || userId;
-  }, [adminId, userId]);
+  const handleSaveProfile = async () => {
+    try {
+      const res = await fetch('/api/dashboard/company-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_name: compName, company_description: compDesc, company_logo: compIcon })
+      });
+      if (res.ok) {
+        setProfile({ company_name: compName, company_description: compDesc, company_logo: compIcon });
+        setIsEditModalOpen(false);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } else {
+        const data = await res.json();
+        alert('Gagal menyimpan profil: ' + data.error);
+      }
+    } catch (err) {
+      alert('Gagal menyimpan profil.');
+    }
+  };
 
-  const profile = slug ? companyProfiles[slug] : null;
-  const displayName = (mounted && profile?.name) ? profile.name : 'GeoSpatial Dashboard';
-  const displayDesc = (mounted && profile?.description) ? profile.description : 'Real-time Node Monitoring';
-  const displayIcon = (mounted && profile?.iconUrl) ? profile.iconUrl : null;
+  const displayName = (mounted && profile?.company_name) ? profile.company_name : 'GeoSpatial Dashboard';
+  const displayDesc = (mounted && profile?.company_description) ? profile.company_description : 'Real-time Node Monitoring';
+  const displayIcon = (mounted && profile?.company_logo) ? profile.company_logo : null;
 
   const nodes = useMapStore((s) => s.nodes);
   const searchQuery = useMapStore((s) => s.searchQuery);
@@ -117,19 +186,43 @@ export default function MapSidebar() {
         onClick={() => setIsMobileExpanded(!isMobileExpanded)}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden">
-            {displayIcon ? (
+          {isLoadingProfile ? (
+            <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
+          ) : displayIcon ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
               <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
-            ) : (
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
               <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+          )}
+          <div>
+            {isLoadingProfile ? (
+              <>
+                <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded animate-pulse mb-1"></div>
+                <div className="h-3 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div>
+                  <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-1">{displayName}</h1>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">{displayDesc}</p>
+                </div>
+                {isDashboard && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleOpenEdit(); }} 
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shrink-0"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    Edit
+                  </button>
+                )}
+              </div>
             )}
           </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{displayName}</h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">{displayDesc}</p>
-          </div>
         </div>
-        {isMobileExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronUp className="w-5 h-5 text-slate-400" />}
+        {isMobileExpanded ? <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" /> : <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" />}
       </div>
 
       {/* Main Content (Hidden on mobile when collapsed) */}
@@ -137,17 +230,41 @@ export default function MapSidebar() {
         
         {/* Header Section (Desktop only for the title, Mobile already has it in the handle) */}
         <div className="p-6 pb-4">
-          <div className="hidden md:flex items-center gap-3 mb-8">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden">
-              {displayIcon ? (
+          <div className="hidden md:flex items-center gap-3 mb-8 w-full">
+            {isLoadingProfile ? (
+              <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
+            ) : displayIcon ? (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
                 <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
-              ) : (
+              </div>
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
                 <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              </div>
+            )}
+            <div className="flex-1 flex items-center justify-between pr-1">
+              {isLoadingProfile ? (
+                <div className="flex flex-col gap-1">
+                  <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+                  <div className="h-3 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-2">{displayName}</h1>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{displayDesc}</p>
+                  </div>
+                  {isDashboard && (
+                    <button 
+                      onClick={handleOpenEdit} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shrink-0 shadow-sm" 
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      Edit Profile
+                    </button>
+                  )}
+                </>
               )}
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{displayName}</h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{displayDesc}</p>
             </div>
           </div>
 
@@ -245,6 +362,84 @@ export default function MapSidebar() {
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal using Portal */}
+      {isEditModalOpen && mounted && document.body && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm px-4 pointer-events-auto">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col gap-5 animate-slide-up relative">
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-white/10 pb-3">
+              Edit Company Profile
+            </h3>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Company Name</label>
+              <input 
+                type="text" 
+                value={compName} 
+                onChange={(e) => setCompName(e.target.value)}
+                placeholder="e.g. PT Mencari Cinta Sejati"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Description / Tagline</label>
+              <input 
+                type="text" 
+                value={compDesc} 
+                onChange={(e) => setCompDesc(e.target.value)}
+                placeholder="e.g. Real-time Node Monitoring"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Company Logo</label>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                  {compIcon ? (
+                    <img src={compIcon} className="w-full h-full object-cover" alt="Preview" />
+                  ) : (
+                    <span className="text-[10px] text-slate-400 text-center leading-tight">No Logo</span>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleIconChange}
+                  className="text-[11px] text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-cyan-50 file:text-cyan-700 dark:file:bg-cyan-500/20 dark:file:text-cyan-400 hover:file:bg-cyan-100 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-4">
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveProfile}
+                className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      {/* Floating Success Toast using Portal */}
+      {showToast && mounted && document.body && createPortal(
+        <div className="fixed bottom-6 right-6 z-[100000] animate-slide-up flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/30 pointer-events-auto">
+          <Check className="w-4 h-4" />
+          Profile updated successfully!
+        </div>
+      , document.body)}
 
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {

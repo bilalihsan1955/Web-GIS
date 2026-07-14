@@ -18,6 +18,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [loading, setLoading] = useState(true);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState<{company_name?: string, company_logo?: string} | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   useEffect(() => {
     setIsMounted(true);
@@ -44,6 +46,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (roleData) {
         setRole(roleData.role);
       }
+      
+      try {
+        const profileRes = await fetch('/api/dashboard/company-profile');
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          if (profileData.profile) {
+            setCompanyProfile(profileData.profile);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch company profile", err);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+
       setIsLoadingRole(false);
       setLoading(false);
     }
@@ -60,11 +77,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── LIQUID-GLASS SIDEBAR ── */}
       <aside className="w-64 m-4 mr-0 rounded-2xl bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-none dark:shadow-2xl flex flex-col shrink-0 relative z-10 overflow-hidden">
-        <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-white/10">
-          <div className="bg-gradient-to-br from-cyan-400 to-blue-600 p-2 rounded-xl mr-3 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-            <ImageIcon className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-slate-900 dark:text-white text-xl tracking-tight">WebGIS</span>
+        <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-white/10 shrink-0">
+          {isLoadingProfile ? (
+            <div className="w-10 h-10 rounded-xl mr-3 shrink-0 animate-pulse bg-slate-200 dark:bg-white/10"></div>
+          ) : companyProfile?.company_logo ? (
+            <div className="w-10 h-10 rounded-xl mr-3 shadow-md shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+              <img src={companyProfile.company_logo} alt="Logo" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-cyan-400 to-blue-600 p-2 rounded-xl mr-3 shadow-[0_0_15px_rgba(34,211,238,0.3)] shrink-0 overflow-hidden w-10 h-10 flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-white" />
+            </div>
+          )}
+          
+          {isLoadingProfile ? (
+            <div className="h-5 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
+          ) : (
+            <span className="font-bold text-slate-900 dark:text-white text-lg tracking-tight line-clamp-2">
+              {companyProfile?.company_name || 'WebGIS'}
+            </span>
+          )}
         </div>
         
         <nav className="flex-1 py-6 px-4 space-y-2">
@@ -82,24 +114,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="h-4 w-28 bg-slate-200 dark:bg-white/10 rounded"></div>
             </div>
           )}
-          {!isLoadingRole && (role === 'superadmin' || role === 'admin') && (
-            <>
-              <Link 
-                href="/dashboard/users" 
-                className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/users' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
-              >
-                <Users className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/users' ? 'text-cyan-400' : ''}`} />
-                User Management
-              </Link>
+          
+          {!isLoadingRole && (
+            <Link 
+              href="/dashboard/preview" 
+              className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/preview' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              <Map className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/preview' ? 'text-cyan-400' : ''}`} />
+              Map Preview
+            </Link>
+          )}
 
-              <Link 
-                href="/dashboard/preview" 
-                className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/preview' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
-              >
-                <Map className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/preview' ? 'text-cyan-400' : ''}`} />
-                Map Preview
-              </Link>
-            </>
+          {!isLoadingRole && (role === 'superadmin' || role === 'admin') && (
+            <Link 
+              href="/dashboard/users" 
+              className={`flex items-center px-4 py-3 rounded-xl group font-medium transition-colors duration-150 border ${pathname === '/dashboard/users' ? 'bg-cyan-50 dark:bg-white/10 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-white/10 shadow-inner' : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              <Users className={`h-5 w-5 mr-3 transition-transform duration-300 group-hover:scale-110 ${pathname === '/dashboard/users' ? 'text-cyan-400' : ''}`} />
+              User Management
+            </Link>
           )}
         </nav>
         

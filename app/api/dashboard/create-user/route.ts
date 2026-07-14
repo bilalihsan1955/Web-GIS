@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     // 2. Verify requester has 'superadmin' or 'admin' role
     const { data: userRoleData, error: roleError } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, parent_admin_id')
       .eq('user_id', user.id)
       .single()
 
@@ -40,8 +40,10 @@ export async function POST(request: Request) {
       role = requestedRole || 'user';
       parentAdminId = requestedParentAdminId || null;
     } else if (requesterRole === 'admin') {
-      role = 'user';
-      parentAdminId = requesterId; // Automatically linked to the admin who created them
+      role = requestedRole === 'admin' ? 'admin' : 'user';
+      // If the requester is already a Co-Admin, they share the same parent_admin_id
+      // Otherwise, the requester is the Owner, so the new user's parent is the requester
+      parentAdminId = userRoleData.parent_admin_id || requesterId; 
     }
 
     // 4. Create user using Admin Client (Service Role Key)

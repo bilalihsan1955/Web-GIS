@@ -16,6 +16,7 @@ import { useMapStore } from '@/store/useMapStore';
 export default function MapboxGlobe({ adminId, className = "absolute inset-0 h-screen w-full" }: { adminId?: string; className?: string }) {
   const { mapContainerRef } = useMapbox();
   const fetchNodes = useMapStore((s) => s.fetchNodes);
+  const isLoading = useMapStore((s) => s.isLoading);
 
   // Fetch the live nodes from Supabase when the map canvas mounts
   useEffect(() => {
@@ -23,10 +24,15 @@ export default function MapboxGlobe({ adminId, className = "absolute inset-0 h-s
   }, [fetchNodes, adminId]);
 
   return (
-    <div
-      ref={mapContainerRef}
-      className={className}
-      aria-label="Interactive globe map"
-    />
+    <>
+      <div
+        ref={mapContainerRef}
+        className={className}
+        aria-label="Interactive globe map"
+      />
+      {isLoading && (
+        <div className={`pointer-events-none z-10 bg-slate-200 dark:bg-slate-800 animate-pulse ${className}`} />
+      )}
+    </>
   );
 }
