@@ -12,22 +12,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. Verify requester has 'admin' role
+    // 2. Verify requester has 'superadmin' or 'admin' role
     const { data: userRoleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
 
-    if (roleError || userRoleData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Requires admin privileges' }, { status: 403 })
+    if (roleError || (userRoleData?.role !== 'superadmin' && userRoleData?.role !== 'admin')) {
+      return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 })
     }
 
+    const requesterRole = userRoleData.role;
+    const requesterId = user.id;
+
     // 3. Parse request body
-    const { email, password, role } = await request.json()
+    const { email, password, role: requestedRole, parentAdminId: requestedParentAdminId } = await request.json()
     
-    if (!email || !password || !role) {
+    if (!email || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    let role = 'user';
+    let parentAdminId = null;
+
+    if (requesterRole === 'superadmin') {
+      role = requestedRole || 'user';
+      parentAdminId = requestedParentAdminId || null;
+    } else if (requesterRole === 'admin') {
+      role = 'user';
+      parentAdminId = requesterId; // Automatically linked to the admin who created them
     }
 
     // 4. Create user using Admin Client (Service Role Key)
@@ -47,7 +61,12 @@ export async function POST(request: Request) {
     const { error: insertRoleError } = await adminSupabase
       .from('user_roles')
       .insert([
-        { user_id: newUser.user.id, role: role }
+        { 
+          user_id: newUser.user.id, 
+          role: role, 
+          parent_admin_id: parentAdminId,
+          email: email
+        }
       ])
 
     if (insertRoleError) {

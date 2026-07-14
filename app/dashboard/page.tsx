@@ -13,6 +13,8 @@ export default function DashboardPage() {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>('user');
   
   const [totalNodes, setTotalNodes] = useState(0);
   const [totalLocations, setTotalLocations] = useState(0);
@@ -44,12 +46,38 @@ export default function DashboardPage() {
   useEffect(() => {
     setIsMounted(true);
     fetchData();
+
+    async function getSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUser(user);
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (roleData) {
+          setUserRole(roleData.role);
+        }
+      }
+    }
+    getSession();
   }, []);
 
   async function fetchData() {
     const { data: spatialNodes } = await supabase
       .from('spatial_nodes')
-      .select('*, locations(name, description)')
+      .select(`
+        *,
+        locations(name, description),
+        creator:user_roles!fk_spatial_nodes_created_by_user_roles (
+          email,
+          role,
+          parent:user_roles!parent_admin_id (
+            email
+          )
+        )
+      `)
       .order('created_at', { ascending: false });
 
     const { data: locs } = await supabase.from('locations').select('id, name').order('name');
@@ -445,7 +473,7 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-in pb-12">
       
       {/* ── ANALYTICS STAT CARDS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 ${userRole === 'user' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6`}>
         <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
           {loading ? (
             <>
@@ -490,34 +518,38 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
-          {loading ? (
-            <>
-              <div className="h-[58px] w-[58px] rounded-xl bg-slate-100 dark:bg-white/10 animate-pulse border border-slate-200 dark:border-white/5 shrink-0" />
-              <div className="ml-5 space-y-2 w-full">
-                <div className="h-4 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
-                <div className="h-8 w-16 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="bg-amber-500/10 dark:bg-amber-500/20 p-4 rounded-xl border border-amber-500/20 shadow-none dark:shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <Users className="h-6 w-6 text-amber-700 dark:text-amber-400" />
-              </div>
-              <div className="ml-5">
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Total User</p>
-                <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalUsers}</p>
-              </div>
-            </>
-          )}
-        </div>
+        {(userRole === 'admin' || userRole === 'superadmin') && (
+          <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-gray-800 rounded-2xl p-6 shadow-none dark:shadow-xl flex items-center hover:bg-white/90 dark:hover:bg-white/5 transition-colors">
+            {loading ? (
+              <>
+                <div className="h-[58px] w-[58px] rounded-xl bg-slate-100 dark:bg-white/10 animate-pulse border border-slate-200 dark:border-white/5 shrink-0" />
+                <div className="ml-5 space-y-2 w-full">
+                  <div className="h-4 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+                  <div className="h-8 w-16 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-amber-500/10 dark:bg-amber-500/20 p-4 rounded-xl border border-amber-500/20 shadow-none dark:shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                  <Users className="h-6 w-6 text-amber-700 dark:text-amber-400" />
+                </div>
+                <div className="ml-5">
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Active Users</p>
+                  <p className="text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">{totalUsers}</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── SMART BATCH UPLOADER ── */}
-      <section>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Upload Pipeline</h2>
-        <SmartUploader onUploadComplete={fetchData} />
-      </section>
+      {(userRole === 'user' || userRole === 'admin' || userRole === 'superadmin') && (
+        <section>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 drop-shadow-sm dark:drop-shadow-md px-2">Upload Pipeline</h2>
+          <SmartUploader onUploadComplete={fetchData} />
+        </section>
+      )}
 
       {/* ── LIVE DATA GRID / TABLE ── */}
       <section>
@@ -577,6 +609,7 @@ export default function DashboardPage() {
                 <tr className="border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
                   <th className="px-6 py-5">Preview</th>
                   <th className="px-6 py-5">Location</th>
+                  <th className="px-6 py-5">Uploaded By</th>
                   <th className="px-6 py-5">Coordinates</th>
                   <th className="px-6 py-5">Capture Date</th>
                   <th className="px-6 py-5">Status</th>
@@ -589,6 +622,7 @@ export default function DashboardPage() {
                     <tr key={i} className="animate-pulse border-b border-slate-100 dark:border-white/5 last:border-0">
                       <td className="px-6 py-5"><div className="h-12 w-12 bg-slate-200 dark:bg-white/10 rounded-lg"></div></td>
                       <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-32"></div></td>
+                      <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-28"></div></td>
                       <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-32"></div></td>
                       <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>
                       <td className="px-6 py-5"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-16"></div></td>
@@ -597,7 +631,7 @@ export default function DashboardPage() {
                   ))
                 ) : filteredNodes.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                       {searchQuery ? 'No nodes found matching your search.' : 'No 360 images found. Upload using the pipeline above.'}
                     </td>
                   </tr>
@@ -631,6 +665,16 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="px-6 py-5">
+                        <div className="flex flex-col space-y-0.5 text-xs text-slate-700 dark:text-slate-300">
+                          <span className="font-semibold">{node.creator?.email || 'System'}</span>
+                          {node.creator?.parent?.email && (
+                            <span className="text-[10px] text-slate-500 mt-1 block">
+                              Admin: {node.creator.parent.email}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
                         <div className="text-sm font-medium text-slate-700 dark:text-slate-300 font-mono">
                           {node.latitude?.toFixed(5) || '-'}, {node.longitude?.toFixed(5) || '-'}
                         </div>
@@ -651,18 +695,22 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end space-x-2 transition-opacity">
-                          <button 
-                            onClick={() => openEditModal(node)}
-                            className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-cyan-200 dark:hover:border-cyan-500/30 backdrop-blur-sm"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => openDeleteModal(node.id, node.image_url, node.location_id)}
-                            className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/20 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-red-200 dark:hover:border-red-500/30 backdrop-blur-sm"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {(userRole === 'superadmin' || (userRole === 'admin' && node.created_by === currentUser?.id)) && (
+                            <>
+                              <button 
+                                onClick={() => openEditModal(node)}
+                                className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-cyan-200 dark:hover:border-cyan-500/30 backdrop-blur-sm"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => openDeleteModal(node.id, node.image_url, node.location_id)}
+                                className="p-2 rounded-lg bg-white/50 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/20 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors border border-slate-200 dark:border-white/5 hover:border-red-200 dark:hover:border-red-500/30 backdrop-blur-sm"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

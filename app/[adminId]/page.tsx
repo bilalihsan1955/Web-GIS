@@ -8,20 +8,13 @@ import DashboardShell from '@/components/ui/DashboardShell';
 import ViewerModal from '@/components/modal/ViewerModal';
 
 import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 // ── Strict Lazy Loading for 360 Viewer ──────────────────────────────
 const Viewer360 = dynamic(() => import('@/components/Viewer360'), {
   ssr: false, // Prevents server-side rendering of heavy WebGL/PSV libraries
 });
 
-/**
- * Lazy-load the Mapbox globe with `ssr: false`.
- *
- * Mapbox GL JS requires browser APIs (WebGL, `window`, `document`).
- * Dynamic import ensures the ~800 KB library only loads on the client
- * and is excluded from the server-rendered initial HTML.
- */
 const MapboxGlobe = dynamic(
   () => import('@/components/map/MapboxGlobe'),
   {
@@ -30,10 +23,7 @@ const MapboxGlobe = dynamic(
   },
 );
 
-function MapContent() {
-  const searchParams = useSearchParams();
-  const adminId = searchParams.get('admin') || undefined;
-
+function MapContent({ adminId }: { adminId: string }) {
   return (
     <>
       {/* Layer 1: Map Canvas */}
@@ -51,13 +41,9 @@ function MapContent() {
   );
 }
 
-/**
- * Dashboard page — assembles the three layers:
- *   1. Full-screen Mapbox globe (fixed, z-0)
- *   2. Glassmorphism overlay panels (fixed, z-10)
- *   3. Viewer modal (fixed, z-50, conditional)
- */
-export default function DashboardPage() {
+export default function AdminPage() {
+  const params = useParams();
+  const adminId = params.adminId as string;
   const { theme, setTheme } = useTheme();
   const originalTheme = useRef<string | undefined>(undefined);
 
@@ -80,7 +66,7 @@ export default function DashboardPage() {
 
   return (
     <Suspense fallback={<MapLoadingFallback />}>
-      <MapContent />
+      <MapContent adminId={adminId} />
     </Suspense>
   );
 }
