@@ -39,7 +39,8 @@ export default function DashboardPage() {
     dynamicSections,
     adminGroups,
     selectedCompanyId,
-    setSelectedCompanyId
+    setSelectedCompanyId,
+    isSuperadminGlobal
   } = useDashboardData();
 
   const mutations = useNodeMutations({
@@ -50,11 +51,25 @@ export default function DashboardPage() {
   });
 
   if (!isRoleLoaded) {
+    if (isSuperadminGlobal) {
+      return (
+        <div className="animate-fade-in pb-12">
+          <CompanyGrid 
+            adminGroups={[]} 
+            onSelect={setSelectedCompanyId} 
+            loading={true}
+          />
+        </div>
+      );
+    }
+
+    const skeletonCards = (userRole === 'admin' || userRole === 'superadmin') ? [1, 2, 3] : [1, 2];
+
     return (
       <div className="flex flex-col gap-8 animate-pulse pb-12 mt-2">
         {/* Placeholder for unified metrics bar */}
         <div className="bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800 rounded-[24px] flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800 overflow-hidden shadow-sm">
-          {[1, 2, 3].map(i => (
+          {skeletonCards.map(i => (
             <div key={i} className="flex-1 p-6 flex items-center">
               <div className="h-[58px] w-[58px] rounded-[24px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
               <div className="ml-5 space-y-1 w-full">
@@ -81,7 +96,7 @@ export default function DashboardPage() {
   }
 
   // If Superadmin is in Global Mode, ONLY show the Company Grid Directory
-  if (userRole === 'superadmin' && selectedCompanyId === 'all') {
+  if (isSuperadminGlobal) {
     return (
       <div className="animate-fade-in pb-12">
         <CompanyGrid 

@@ -414,17 +414,17 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
           </div>
         </div>
 
-        <div className="pt-6 flex justify-end space-x-3 mt-2">
+        <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3 mt-2">
           <button 
             onClick={handleCancel} 
-            className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
           >
             {t('cancel')}
           </button>
           <button 
             onClick={saveNodeToDatabase}
             disabled={!locationName.trim()}
-            className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/20 active:scale-95"
+            className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/20 active:scale-95"
           >
             {t('save')}
           </button>
@@ -441,7 +441,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
-        className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-[24px] transition-all duration-300  ${
+        className={`relative flex flex-col items-center justify-center p-6 sm:p-12 border-2 border-dashed rounded-[24px] transition-all duration-300  ${
           isDragging 
             ? 'border-cyan-400 bg-zinc-100 dark:bg-zinc-800' 
             : 'border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800'

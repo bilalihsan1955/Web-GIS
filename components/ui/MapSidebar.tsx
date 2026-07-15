@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check, Layers } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check, Layers, Share2, ChevronLeft, Info } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import { useMapStore, ADMIN_SLUG_MAP } from '@/store/useMapStore';
@@ -12,7 +12,25 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
 import Modal from '@/components/ui/Modal';
 
-export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminIdOverride?: string, forceDashboard?: boolean } = {}) {
+export interface MapSidebarProps {
+  adminIdOverride?: string;
+  forceDashboard?: boolean;
+  onBack?: () => void;
+  showShareButton?: boolean;
+  shareUrl?: string;
+  isShareLocked?: boolean;
+  shareLockedMessage?: string;
+}
+
+export default function MapSidebar({ 
+  adminIdOverride, 
+  forceDashboard,
+  onBack,
+  showShareButton,
+  shareUrl,
+  isShareLocked,
+  shareLockedMessage
+}: MapSidebarProps = {}) {
   const params = useParams();
   const adminId = adminIdOverride || (params.adminId as string);
   const companyProfiles = useMapStore((s) => s.companyProfiles);
@@ -28,8 +46,16 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
   const [compDesc, setCompDesc] = useState('');
   const [compIcon, setCompIcon] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [copied, setCopied] = useState(false);
   const isDashboard = forceDashboard !== undefined ? forceDashboard : !adminId;
   const { t } = useLanguage();
+
+  const handleCopyLink = () => {
+    if (!shareUrl || isShareLocked) return;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -195,72 +221,72 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
 
   return (
     <div className={`pointer-events-auto absolute z-20 flex flex-col shadow-none dark:shadow-2xl transition-all duration-300 overflow-hidden bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-slate-200 dark:border-white/10
-      md:left-0 md:top-0 md:bottom-0 md:w-[340px] md:border-r md:rounded-none md:h-auto
+      md:left-0 md:top-0 md:bottom-0 ${isDashboard ? 'md:w-[250px] lg:w-[260px] xl:w-[270px]' : 'md:w-[340px]'} md:border-r md:rounded-none md:h-auto
       left-0 bottom-0 w-full border-t rounded-t-2xl
       ${isMobileExpanded ? 'h-[75vh]' : 'h-[70px] md:h-full'}
     `}>
       
       {/* Mobile Drag Handle / Header */}
       <div 
-        className="md:hidden flex items-center justify-between px-6 py-4 cursor-pointer border-b border-slate-200 dark:border-white/5 active:bg-slate-100 dark:active:bg-white/5"
+        className="md:hidden flex items-center justify-between px-5 py-3.5 cursor-pointer border-b border-slate-200 dark:border-white/5 active:bg-slate-100 dark:active:bg-white/5 min-h-[70px]"
         onClick={() => setIsMobileExpanded(!isMobileExpanded)}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+          {onBack && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onBack(); }} 
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 shrink-0"
+              title={t('backToCompanies') || 'Kembali'}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
           {isLoadingProfile ? (
-            <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
+            <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
           ) : displayIcon ? (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
-              <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
+              <Image src={displayIcon} width={32} height={32} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
             </div>
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
-              <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
+              <Radio className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
             </div>
           )}
-          <div>
-            {isLoadingProfile ? (
-              <>
-                <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded animate-pulse mb-1"></div>
-                <div className="h-3 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse"></div>
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-1">{displayName}</h1>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">{displayDesc}</p>
-                </div>
-                {isDashboard && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleOpenEdit(); }} 
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shrink-0"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {t('editProfile')}
-                  </button>
-                )}
-              </div>
-            )}
+          <div className="min-w-0">
+            <h1 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-white truncate">{displayName}</h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{displayDesc}</p>
           </div>
         </div>
-        {isMobileExpanded ? <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" /> : <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" />}
+        <div className="shrink-0 pl-1">
+          {isMobileExpanded ? <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" /> : <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" />}
+        </div>
       </div>
 
       {/* Main Content (Hidden on mobile when collapsed) */}
       <div className={`flex flex-col flex-1 overflow-hidden ${!isMobileExpanded ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header Section (Desktop only for the title, Mobile already has it in the handle) */}
-        <div className="p-6 pb-4">
-          <div className="hidden md:flex flex-col gap-3 mb-8 w-full">
-            <div className="flex items-center gap-3 w-full">
+        <div className={isDashboard ? "p-4 pb-3" : "p-6 pb-4"}>
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="flex items-center justify-center gap-1.5 w-full px-3 py-2 mb-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-bold transition-all shadow-sm group min-h-[40px]"
+            >
+              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform shrink-0 text-cyan-600 dark:text-cyan-400" />
+              <span className="truncate">{t('backToCompanies') || 'Kembali ke Daftar Perusahaan'}</span>
+            </button>
+          )}
+          <div className={`hidden md:flex flex-col gap-2.5 ${isDashboard ? 'mb-4' : 'mb-8'} w-full`}>
+            <div className="flex items-center gap-2.5 w-full">
               {isLoadingProfile ? (
-                <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
+                <div className={`${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0`}></div>
               ) : displayIcon ? (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
+                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0`}>
                   <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
                 </div>
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
-                  <Radio className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0`}>
+                  <Radio className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
                 </div>
               )}
               <div className="flex-1 pr-1">
@@ -271,8 +297,8 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-2">{displayName}</h1>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{displayDesc}</p>
+                    <h1 className={`${isDashboard ? 'text-xs' : 'text-sm'} font-semibold tracking-tight text-slate-900 dark:text-white line-clamp-1`}>{displayName}</h1>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">{displayDesc}</p>
                   </>
                 )}
               </div>
@@ -280,63 +306,137 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
             
             {isDashboard && (
               <div className="flex flex-col items-start gap-1.5 w-full mt-1">
+                {showShareButton && (
+                  <button
+                    onClick={handleCopyLink}
+                    disabled={isShareLocked}
+                    className={`flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all shadow-sm text-[11px] font-bold ${
+                      isShareLocked 
+                        ? 'border-zinc-300 dark:border-zinc-700/50 bg-zinc-200 dark:bg-zinc-800/60 text-zinc-400 cursor-not-allowed' 
+                        : 'border-cyan-400/30 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-md active:scale-[0.98]'
+                    }`}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 animate-bounce shrink-0" />
+                        <span className="truncate">{t('copiedLink') || 'Tautan Disalin!'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className={`w-3.5 h-3.5 shrink-0 ${isShareLocked ? 'opacity-50' : ''}`} />
+                        <span className="truncate">{t('shareGuestMap') || 'Share Guest Map'}</span>
+                        {isShareLocked && (
+                          <span className="ml-auto text-[9px] font-bold bg-black/20 px-1.5 py-0.5 rounded text-zinc-300 shrink-0">{t('locked') || 'Terkunci'}</span>
+                        )}
+                      </>
+                    )}
+                  </button>
+                )}
                 <button 
                   onClick={handleOpenEdit} 
-                  className="flex items-center justify-center w-full gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shadow-sm" 
+                  className="flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shadow-sm" 
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  {t('editProfile')}
+                  <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t('editProfile')}</span>
                 </button>
                 <button 
                   onClick={() => setIsManageSectionsOpen(true)} 
-                  className="flex items-center justify-center w-full gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 transition-all shadow-sm" 
+                  className="flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 transition-all shadow-sm" 
                 >
-                  <Layers className="w-3.5 h-3.5" />
-                  {t('manageSections')}
+                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t('manageSections')}</span>
                 </button>
               </div>
             )}
           </div>
 
-          <div className="flex gap-16 items-start mb-6">
+          {/* Mobile Action Buttons when drawer is expanded */}
+          {isDashboard && (
+            <div className="md:hidden flex flex-col gap-2 mb-4 w-full">
+              {showShareButton && (
+                <button
+                  onClick={handleCopyLink}
+                  disabled={isShareLocked}
+                  className={`flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl border transition-all shadow-sm text-xs font-bold min-h-[44px] ${
+                    isShareLocked 
+                      ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' 
+                      : 'border-cyan-400/30 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-md active:scale-95'
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 animate-bounce shrink-0" />
+                      <span>{t('copiedLink') || 'Tautan Disalin!'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className={`w-4 h-4 shrink-0 ${isShareLocked ? 'opacity-50' : ''}`} />
+                      <span>{t('shareGuestMap') || 'Share Guest Map'}</span>
+                      {isShareLocked && (
+                        <span className="ml-auto text-[10px] font-bold bg-black/20 px-2 py-0.5 rounded text-zinc-300 shrink-0">{t('locked') || 'Terkunci'}</span>
+                      )}
+                    </>
+                  )}
+                </button>
+              )}
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+                <button 
+                  onClick={handleOpenEdit} 
+                  className="flex items-center justify-center flex-1 gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-cyan-400 min-h-[44px] shadow-sm transition-all active:scale-95" 
+                >
+                  <Edit3 className="w-4 h-4 text-cyan-500 shrink-0" />
+                  {t('editProfile')}
+                </button>
+                <button 
+                  onClick={() => setIsManageSectionsOpen(true)} 
+                  className="flex items-center justify-center flex-1 gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 min-h-[44px] shadow-sm transition-all active:scale-95" 
+                >
+                  <Layers className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {t('manageSections')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={`flex ${isDashboard ? 'gap-8 items-start mb-3' : 'gap-16 items-start mb-6'}`}>
             <div>
-              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('totalNodes')}</p>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{t('totalNodes')}</p>
               {isLoading ? (
-                <div className="h-9 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
+                <div className="h-8 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
               ) : (
-                <p className="text-3xl font-bold text-cyan-600 dark:text-cyan-400 drop-shadow-sm dark:drop-shadow-md">{nodes.length}</p>
+                <p className={`${isDashboard ? 'text-2xl' : 'text-3xl'} font-bold text-cyan-600 dark:text-cyan-400 drop-shadow-sm dark:drop-shadow-md`}>{nodes.length}</p>
               )}
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('projectScale')}</p>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{t('projectScale')}</p>
               {isLoading ? (
-                <div className="h-8 w-20 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
+                <div className="h-8 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse mt-1"></div>
               ) : (
-                <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 drop-shadow-sm dark:drop-shadow-md">Large</p>
+                <p className={`${isDashboard ? 'text-xl' : 'text-2xl'} font-bold text-cyan-600 dark:text-cyan-400 drop-shadow-sm dark:drop-shadow-md`}>Large</p>
               )}
             </div>
           </div>
 
           {/* Search */}
-          <div className="relative mb-5">
+          <div className={`relative ${isDashboard ? 'mb-3' : 'mb-5'}`}>
             <input 
               type="text" 
               placeholder={t('searchStation')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/60 dark:bg-black/40 backdrop-blur-sm border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg pl-4 pr-10 py-2.5 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
+              className={`w-full bg-white/60 dark:bg-black/40 backdrop-blur-sm border border-slate-200 dark:border-white/10 ${isDashboard ? 'text-xs py-2' : 'text-sm py-2.5'} text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg pl-3.5 pr-10 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner`}
             />
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {dynamicSections.map(sec => {
               const isActive = activeSection === sec;
               return (
                 <button
                   key={sec}
                   onClick={() => setActiveSection(sec)}
-                  className={`px-4 py-1.5 rounded-full text-[11px] font-bold tracking-wider transition-all duration-300
+                  className={`${isDashboard ? 'px-3 py-1 text-[10px]' : 'px-4 py-1.5 text-[11px]'} rounded-full font-bold tracking-wider transition-all duration-300
                     ${isActive 
                       ? 'bg-cyan-500 text-white dark:bg-cyan-400 dark:text-slate-900 shadow-sm' 
                       : 'bg-white/60 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-cyan-400 hover:bg-slate-50/50 dark:hover:bg-white/5'}`}
@@ -349,15 +449,15 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
         </div>
 
         {/* Locations Log */}
-        <div className="px-6 pt-2 pb-2">
+        <div className={isDashboard ? "px-4 pt-1 pb-1.5" : "px-6 pt-2 pb-2"}>
           <h2 className="text-[12px] font-bold text-slate-600 dark:text-slate-400">Log Lokasi</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3 custom-scrollbar">
+        <div className={`flex-1 overflow-y-auto ${isDashboard ? 'px-4 pb-4 space-y-2' : 'px-6 pb-6 space-y-3'} custom-scrollbar`}>
           {isLoading ? (
             // Skeleton Loader
             [...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-4 rounded-xl animate-pulse backdrop-blur-sm">
+              <div key={i} className={`bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 ${isDashboard ? 'p-3' : 'p-4'} rounded-xl animate-pulse backdrop-blur-sm`}>
                 <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4 mb-1.5"></div>
                 <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-1/2 mb-1.5"></div>
                 <div className="h-2.5 bg-slate-100 dark:bg-white/5 rounded w-1/3"></div>
@@ -368,7 +468,7 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
               <div 
                 key={`${loc.id}-${idx}`}
                 onClick={() => handleLocationClick(loc)}
-                className="bg-white/60 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/5 p-4 rounded-xl cursor-pointer hover:bg-white/90 dark:hover:bg-white/10 hover:border-cyan-500/30 dark:hover:border-cyan-500/30 transition-all group shadow-none dark:shadow-none"
+                className={`bg-white/60 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/5 ${isDashboard ? 'p-3' : 'p-4'} rounded-xl cursor-pointer hover:bg-white/90 dark:hover:bg-white/10 hover:border-cyan-500/30 dark:hover:border-cyan-500/30 transition-all group shadow-none dark:shadow-none`}
               >
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                   {loc.locationName}

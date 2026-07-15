@@ -11,9 +11,11 @@ export function useDashboardData() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // Get global role and company selection from store
-  const userRole = useDashboardStore((s) => s.userRole) || 'user';
+  // Get global role from store or safe post-mount cache to guarantee zero hydration mismatch
+  const userRoleFromStore = useDashboardStore((s) => s.userRole);
   const setUserRole = useDashboardStore((s) => s.setUserRole);
+  const [cachedRole, setCachedRole] = useState<string | null>(null);
+  const userRole = userRoleFromStore || cachedRole || 'user';
   
   const [currentUserGroupId, setCurrentUserGroupId] = useState<string>('');
   
@@ -32,9 +34,13 @@ export function useDashboardData() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     
-    // Get Session first
+    // Phase 1: Session and Role Check
     const { data: { user } } = await supabase.auth.getUser();
-    let currentUserRole = 'user';
+    let currentUserRole = cachedRole || 'user';
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('webgis_user_role');
+      if (stored) currentUserRole = stored;
+    }
     let localUserGroupId = '';
     
     if (user) {
@@ -47,27 +53,15 @@ export function useDashboardData() {
       if (roleData) {
         currentUserRole = roleData.role;
         setUserRole(roleData.role);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('webgis_user_role', roleData.role);
+        }
         localUserGroupId = roleData.parent_admin_id || user.id;
         setCurrentUserGroupId(localUserGroupId);
       } else {
         localUserGroupId = user.id;
         setCurrentUserGroupId(localUserGroupId);
       }
-
-      // If Superadmin, fetch all admin groups for the company selector
-      if (currentUserRole === 'superadmin') {
-        const { data: admins } = await supabase
-          .from('user_roles')
-          .select('user_id, company_name, email, company_logo, company_slug')
-          .eq('role', 'admin') // strictly only Admins are considered Companies
-          .is('parent_admin_id', null) // Only fetch true Company Owners, not Co-Admins
-          .order('company_name', { ascending: true });
-        
-        if (admins) {
-          setAdminGroups(admins);
-        }
-      }
-      
       setIsRoleLoaded(true);
     } else {
       setIsRoleLoaded(true);
@@ -78,20 +72,49 @@ export function useDashboardData() {
       targetAdminId = selectedCompanyId;
     }
 
+    // Phase 2: OPTIMIZATION - Parallel fetching of independent queries (admins group, company users, exact user count)
+    const adminsPromise = currentUserRole === 'superadmin'
+      ? supabase
+          .from('user_roles')
+          .select('user_id, company_name, email, company_logo, company_slug')
+          .eq('role', 'admin') // strictly only Admins are considered Companies
+          .is('parent_admin_id', null) // Only fetch true Company Owners, not Co-Admins
+          .order('company_name', { ascending: true })
+      : Promise.resolve({ data: null });
+
+    const companyUsersPromise = (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all')
+      ? supabase
+          .from('user_roles')
+          .select('user_id')
+          .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`)
+      : Promise.resolve({ data: null });
+
+    const usersCountPromise = supabase
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true });
+
+    // OPTIMIZATION: Diubah ke Promise.all untuk paralel fetching tanpa mengubah struktur data
+    const [adminsRes, companyUsersRes, usersCountRes] = await Promise.all([
+      adminsPromise,
+      companyUsersPromise,
+      usersCountPromise,
+    ]);
+
+    if (adminsRes.data) {
+      setAdminGroups(adminsRes.data);
+    }
+
     let allowedCreatorIds: string[] | null = null;
-    // If not global superadmin, we must filter by targetAdminId
     if (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all') {
-      const { data: companyUsers } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`);
-      if (companyUsers) {
-        allowedCreatorIds = companyUsers.map(u => u.user_id);
+      if (companyUsersRes.data) {
+        allowedCreatorIds = companyUsersRes.data.map(u => u.user_id);
       } else {
         allowedCreatorIds = [targetAdminId]; // fallback
       }
     }
 
+    // Phase 3: OPTIMIZATION - Parallel fetching of spatial_nodes and totalUsers calculation
+    // Preserve exact valid base columns of spatial_nodes along with locations & creator JOINs
     let nodesQuery = supabase
       .from('spatial_nodes')
       .select(`
@@ -112,28 +135,37 @@ export function useDashboardData() {
       nodesQuery = nodesQuery.in('created_by', allowedCreatorIds);
     }
 
-    const { data: spatialNodes } = await nodesQuery;
-
-    // Default fallback to user_roles
-    const { count: usersCount } = await supabase.from('user_roles').select('*', { count: 'exact', head: true });
-    
-    // Try to get real count from API (includes users without explicit role entries)
-    try {
-      const res = await fetch('/api/dashboard/users');
-      const apiData = await res.json();
-      if (apiData.users) {
-        let filteredUsers = apiData.users;
-        if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
-          filteredUsers = apiData.users.filter((u: any) => 
-            u.parent_admin_id === selectedCompanyId || u.id === selectedCompanyId
-          );
+    const fetchTotalUsersTask = async () => {
+      const { count: usersCount } = usersCountRes;
+      try {
+        const res = await fetch('/api/dashboard/users');
+        const apiData = await res.json();
+        if (apiData.users) {
+          let filteredUsers = apiData.users;
+          if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
+            filteredUsers = apiData.users.filter((u: any) => 
+              u.parent_admin_id === selectedCompanyId || u.id === selectedCompanyId
+            );
+          }
+          setTotalUsers(filteredUsers.length);
+        } else if (usersCount !== null) {
+          setTotalUsers(usersCount);
         }
-        setTotalUsers(filteredUsers.length);
-      } else if (usersCount !== null) {
-        setTotalUsers(usersCount);
+      } catch (e) {
+        if (usersCount !== null) setTotalUsers(usersCount);
       }
-    } catch (e) {
-      if (usersCount !== null) setTotalUsers(usersCount);
+    };
+
+    // OPTIMIZATION: Paralel execute nodes query & totalUsers resolution
+    const [nodesRes] = await Promise.all([
+      nodesQuery,
+      fetchTotalUsersTask()
+    ]);
+
+    const { data: spatialNodes, error: spatialError } = nodesRes;
+
+    if (spatialError) {
+      console.error('[useDashboardData] Failed to fetch spatial nodes:', spatialError.message || spatialError);
     }
 
     if (spatialNodes) {
@@ -148,6 +180,10 @@ export function useDashboardData() {
 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('webgis_user_role');
+      if (stored) setCachedRole(stored);
+    }
     fetchData();
   }, [fetchData]);
 
@@ -163,6 +199,9 @@ export function useDashboardData() {
   });
 
   const dynamicSections = Array.from(new Set(nodes.map(n => n.locations?.company_sections?.name || n.locations?.description).filter(Boolean)));
+
+  const isSuperadminRole = userRole === 'superadmin' || (isMounted && typeof window !== 'undefined' && localStorage.getItem('webgis_user_role') === 'superadmin');
+  const isSuperadminGlobal = isSuperadminRole && selectedCompanyId === 'all';
 
   return {
     nodes,
@@ -190,6 +229,8 @@ export function useDashboardData() {
     // Superadmin exports
     adminGroups,
     selectedCompanyId,
-    setSelectedCompanyId
+    setSelectedCompanyId,
+    isSuperadminRole,
+    isSuperadminGlobal
   };
 }

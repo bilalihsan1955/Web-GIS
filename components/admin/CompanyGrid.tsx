@@ -21,13 +21,13 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
   });
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 p-5 ">
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 p-5 ">
+        <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-cyan-500" />{t('companyDirectory') || 'Direktori Perusahaan (Klien)'}</h2>
+            <Building2 className="w-6 h-6 text-cyan-500 shrink-0" />{t('companyDirectory') || 'Direktori Perusahaan (Klien)'}</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t('companyDirectoryDesc') || 'Pilih salah satu perusahaan di bawah ini untuk masuk ke mode kelola dan mengunggah peta untuk mereka.'}</p>
         </div>
-        <div className="w-full sm:w-72 relative">
+        <div className="w-full lg:w-80 relative shrink-0">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input 
             type="text" 

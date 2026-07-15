@@ -7,13 +7,21 @@ import { LogOut } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-export default function LogoutButton() {
+interface LogoutButtonProps {
+  className?: string;
+  fullWidth?: boolean;
+}
+
+export default function LogoutButton({ className = '', fullWidth = false }: LogoutButtonProps = {}) {
   const router = useRouter();
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
 
   const handleSignOut = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('webgis_user_role');
+    }
     await supabase.auth.signOut();
     router.refresh();
     router.push('/dashboard/login');
@@ -23,9 +31,9 @@ export default function LogoutButton() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95"
+        className={`flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 ${fullWidth ? 'w-full min-h-[44px]' : ''} ${className}`}
       >
-        <LogOut className="h-4 w-4 mr-2" />
+        <LogOut className="h-4 w-4 mr-2 shrink-0" />
         {t('signOut') || 'Sign Out'}
       </button>
 

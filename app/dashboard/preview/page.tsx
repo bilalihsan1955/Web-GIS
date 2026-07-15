@@ -36,7 +36,7 @@ export default function PreviewPage() {
 
   const [slug, setSlug] = useState('');
   const [hasValidCompany, setHasValidCompany] = useState(false);
-  const { userRole, adminGroups, selectedCompanyId, setSelectedCompanyId, loading: dashboardLoading, isRoleLoaded } = useDashboardData();
+  const { userRole, adminGroups, selectedCompanyId, setSelectedCompanyId, loading: dashboardLoading, isRoleLoaded, isSuperadminGlobal } = useDashboardData();
 
   const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
   const activeAdminId = (userRole === 'superadmin' && selectedCompanyId !== 'all') 
@@ -83,32 +83,65 @@ export default function PreviewPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isRoleLoaded || loading) {
-    return (
-      <div className="relative h-[calc(100vh-140px)] w-full rounded-[24px] overflow-hidden border border-zinc-200 dark:border-white/10 shadow-inner bg-zinc-950 flex animate-pulse">
-        {/* Skeleton Map Background */}
-        <div className="absolute inset-0 w-full h-full z-0 bg-zinc-200 dark:bg-zinc-800/80"></div>
-        
-        {/* Skeleton Sidebar (Mobile & Desktop) */}
-        <div className="absolute left-0 bottom-0 md:top-0 md:bottom-0 w-full md:w-[340px] h-[70px] md:h-full z-10 bg-white/60 dark:bg-black/40 border-t md:border-t-0 md:border-r border-zinc-200 dark:border-white/10 rounded-t-2xl md:rounded-none"></div>
-        
-        {/* Skeleton Buttons */}
-        <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-           <div className="h-12 w-[180px] rounded-xl bg-zinc-300 dark:bg-white/10"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // If Superadmin is in Global Mode, show the Company Grid Directory
-  if (userRole === 'superadmin' && selectedCompanyId === 'all') {
+  // If Superadmin is in Global Mode, show the Company Grid Directory or its skeleton right away
+  if (isSuperadminGlobal) {
     return (
       <div className="animate-fade-in pb-12">
         <CompanyGrid 
           adminGroups={adminGroups} 
           onSelect={setSelectedCompanyId} 
-          loading={dashboardLoading}
+          loading={!isRoleLoaded || loading || dashboardLoading}
         />
+      </div>
+    );
+  }
+
+  if (!isRoleLoaded || loading) {
+    return (
+      <div className="relative h-[calc(100vh-140px)] w-full rounded-[24px] overflow-hidden border border-zinc-200 dark:border-white/10 shadow-inner bg-zinc-950 flex animate-pulse font-sans">
+        {/* Skeleton Map Background */}
+        <div className="absolute inset-0 w-full h-full z-0 bg-zinc-900/80">
+          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:24px_24px]"></div>
+        </div>
+        
+        {/* Skeleton Sidebar (Mobile Bottom Drawer & Desktop Left Sidebar matching MapSidebar precisely) */}
+        <div className="absolute z-10 flex flex-col bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-zinc-200 dark:border-white/10 md:left-0 md:top-0 md:bottom-0 md:w-[250px] lg:w-[260px] xl:w-[270px] md:border-r md:rounded-none md:h-full left-0 bottom-0 w-full border-t rounded-t-2xl h-[70px] md:h-auto p-4 justify-between">
+          <div className="hidden md:flex flex-col gap-4 w-full">
+            <div className="h-9 w-full rounded-xl bg-zinc-200 dark:bg-white/10"></div>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-zinc-200 dark:bg-white/10 shrink-0"></div>
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-3/4 rounded bg-zinc-200 dark:bg-white/10"></div>
+                <div className="h-3 w-1/2 rounded bg-zinc-200 dark:bg-white/10"></div>
+              </div>
+            </div>
+            <div className="h-9 w-full rounded-xl bg-zinc-200 dark:bg-white/10 mt-2"></div>
+            <div className="h-9 w-full rounded-xl bg-zinc-200 dark:bg-white/10"></div>
+            <div className="h-9 w-full rounded-xl bg-zinc-200 dark:bg-white/10"></div>
+          </div>
+
+          <div className="md:hidden flex items-center justify-between w-full">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-zinc-200 dark:bg-white/10 shrink-0"></div>
+              <div className="space-y-1">
+                <div className="h-4 w-32 rounded bg-zinc-200 dark:bg-white/10"></div>
+                <div className="h-3 w-20 rounded bg-zinc-200 dark:bg-white/10"></div>
+              </div>
+            </div>
+            <div className="h-5 w-5 rounded bg-zinc-200 dark:bg-white/10"></div>
+          </div>
+
+          <div className="hidden md:flex flex-col gap-2 pt-4 border-t border-zinc-200 dark:border-white/10">
+            <div className="h-8 w-full rounded-lg bg-zinc-200 dark:bg-white/10"></div>
+            <div className="h-8 w-full rounded-lg bg-zinc-200 dark:bg-white/10"></div>
+          </div>
+        </div>
+        
+        {/* Zoom / Map Controls Skeleton on Right */}
+        <div className="absolute top-6 right-6 z-10 flex flex-col gap-2">
+          <div className="h-9 w-9 rounded-xl bg-white/80 dark:bg-black/60 border border-zinc-200 dark:border-white/10"></div>
+          <div className="h-9 w-9 rounded-xl bg-white/80 dark:bg-black/60 border border-zinc-200 dark:border-zinc-800"></div>
+        </div>
       </div>
     );
   }
@@ -132,80 +165,16 @@ export default function PreviewPage() {
       {/* Dynamic Map Component restricted to container bounds */}
       <MapboxGlobe adminId={activeAdminId} className="absolute inset-0 w-full h-full z-0" />
       
-      {/* Left Navigation Overlay Sidebar (fits nicely inside container) */}
-      <div className="absolute inset-y-0 left-0 z-10 pointer-events-none md:h-full">
-        <MapSidebar adminIdOverride={activeAdminId} forceDashboard={true} />
-      </div>
-
-      {/* Superadmin Impersonation Floating Header */}
-      {userRole === 'superadmin' && selectedCompanyId !== 'all' && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-2 items-center pointer-events-auto">
-          <div className="bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full pl-2 pr-5 py-2 shadow-xl flex items-center gap-3">
-             <button 
-              onClick={() => setSelectedCompanyId('all')}
-              className="group flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-full transition-colors"
-             >
-              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-              {t('backToCompanies') || 'Kembali ke Daftar Perusahaan'}
-             </button>
-             <div className="w-px h-6 bg-zinc-700/50"></div>
-             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-zinc-800 flex items-center justify-center">
-                {activeCompany?.company_logo ? (
-                  <Image src={activeCompany.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
-                ) : (
-                  <Building2 className="w-4 h-4 text-zinc-400" />
-                )}
-             </div>
-             <strong className="text-sm text-white font-bold whitespace-nowrap">{activeCompany?.company_name || 'Tanpa Nama'}</strong>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Share Link Button in Top Right */}
-      <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3 pointer-events-auto">
-        <div className="flex items-center gap-2">
-          {/* Share Button */}
-          {!isValidToShare ? (
-            <div className="flex flex-col items-end gap-3">
-              <button
-                disabled
-                className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-zinc-400 bg-zinc-800/80 backdrop-blur-md rounded-xl transition-all shadow-inner border border-zinc-700/50 cursor-not-allowed"
-              >
-                <Share2 className="w-4 h-4 opacity-50" />
-                {t('shareGuestMap')}
-                <span className="ml-2 text-[11px] font-bold bg-zinc-700/80 px-2 py-0.5 rounded text-zinc-400">{t('locked')}</span>
-              </button>
-              
-              {/* Notification Box explaining why it is locked */}
-              <div className="bg-zinc-900/95 backdrop-blur border border-amber-500/30 rounded-xl p-3 shadow-xl max-w-[280px] animate-in fade-in slide-in-from-top-2 duration-500">
-                <div className="flex gap-2">
-                   <div className="text-amber-400 mt-0.5 shrink-0"><Info className="w-4 h-4"/></div>
-                   <p className="text-xs text-zinc-300 leading-relaxed">
-                     {t('lockedMsg')}
-                   </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={handleCopyLink}
-              className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98] border border-cyan-400/20"
-            >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4 animate-bounce" />
-                {t('copiedLink')}
-              </>
-            ) : (
-              <>
-                <Share2 className="w-4 h-4" />
-                {t('shareGuestMap')}
-              </>
-            )}
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Left Navigation Overlay Sidebar (handles both desktop left docking and mobile bottom drawer) */}
+      <MapSidebar 
+        adminIdOverride={activeAdminId} 
+        forceDashboard={true} 
+        onBack={userRole === 'superadmin' && selectedCompanyId !== 'all' ? () => setSelectedCompanyId('all') : undefined}
+        showShareButton={true}
+        shareUrl={typeof window !== 'undefined' && activeAdminId ? `${window.location.origin}/${activeAdminId}` : ''}
+        isShareLocked={!isValidToShare}
+        shareLockedMessage={t('lockedMsg')}
+      />
 
       {/* 360-Degree Panorama Viewer (opens on unclustered point click) */}
       <Viewer360 />

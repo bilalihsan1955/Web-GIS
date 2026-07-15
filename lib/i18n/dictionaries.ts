@@ -125,6 +125,8 @@ export const dictionaries = {
     dark: 'Gelap',
     light: 'Terang',
     edit: 'Edit',
+    expandSidebar: 'Perluas Sidebar',
+    collapseSidebar: 'Tutup Sidebar',
     
     // Index Page & Common Actions
     indexTitle: 'Data',
@@ -258,6 +260,8 @@ export const dictionaries = {
     dark: 'Dark',
     light: 'Light',
     edit: 'Edit',
+    expandSidebar: 'Expand Sidebar',
+    collapseSidebar: 'Collapse Sidebar',
     
     // Index Page & Common Actions
     indexTitle: 'Data',

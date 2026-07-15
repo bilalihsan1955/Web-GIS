@@ -30,6 +30,9 @@ export default function UsersManagementPage() {
 
   const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
   const setSelectedCompanyId = useDashboardStore((s) => s.setSelectedCompanyId);
+  const userRoleFromStore = useDashboardStore((s) => s.userRole);
+  const effectiveRole = userRole === 'superadmin' ? 'superadmin' : (userRoleFromStore || (isMounted && typeof window !== 'undefined' ? localStorage.getItem('webgis_user_role') : null) || userRole);
+  const isSuperadminGlobal = effectiveRole === 'superadmin' && selectedCompanyId === 'all';
   const [adminGroups, setAdminGroups] = useState<{user_id: string, company_name: string | null, email: string, company_logo: string | null, company_slug: string | null}[]>([]);
 
   // Modal states
@@ -280,9 +283,9 @@ export default function UsersManagementPage() {
           </select>
         )}
         </div>
-        <div className="pt-2 flex justify-end space-x-2">
-          <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
-          <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
+        <div className="pt-4 flex flex-col sm:flex-row justify-end gap-2">
+          <button type="button" onClick={() => setIsCreateModalOpen(false)} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
+          <button type="submit" disabled={modalLoading} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
             {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
             {t('createNewUser') || 'Create Account'}
           </button>
@@ -336,9 +339,9 @@ export default function UsersManagementPage() {
           </select>
         )}
         </div>
-        <div className="pt-2 flex justify-end space-x-2">
-          <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
-          <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
+        <div className="pt-4 flex flex-col sm:flex-row justify-end gap-2">
+          <button type="button" onClick={() => setIsEditModalOpen(false)} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
+          <button type="submit" disabled={modalLoading} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
             {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
             {t('saveChanges') || 'Save Changes'}
           </button>
@@ -404,17 +407,17 @@ export default function UsersManagementPage() {
     return matchesSearch && matchesRole;
   });
 
-  if (userRole === 'superadmin' && selectedCompanyId === 'all') {
+  if (isSuperadminGlobal) {
     return (
       <div className="animate-fade-in pb-12 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 p-5 ">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 p-5 ">
           <div>
             <h1 className="text-xl font-bold text-zinc-900 dark:text-white">{t('globalUserManagement') || 'Manajemen Pengguna Global'}</h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t('selectCompanyToViewUsers') || 'Pilih salah satu perusahaan di bawah ini untuk melihat pengguna/karyawannya.'}</p>
           </div>
           <button 
             onClick={openCreateModal}
-            className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all  shrink-0"
+            className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 w-full lg:w-auto"
           >
             <UserPlus className="w-5 h-5 mr-2 shrink-0" />
             {t('addNewCompanyAdmin') || 'Tambah Perusahaan Baru (Admin)'}
@@ -456,7 +459,7 @@ export default function UsersManagementPage() {
       )}
 
       {/* Page Context Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
+      <div className="flex flex-col lg:flex-row gap-4 mb-4 relative z-[60] items-stretch lg:items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
           <input 
@@ -464,15 +467,15 @@ export default function UsersManagementPage() {
             placeholder={t('searchUsers') || 'Search users by email or role...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all "
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl pl-10 pr-4 py-2.5 min-h-[44px] w-full outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all "
           />
         </div>
 
         {/* Custom Role Filter Dropdown */}
-        <div className="relative z-[70]">
+        <div className="relative z-[70] w-full sm:w-auto">
           <button
             onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all  outline-none
+            className={`flex items-center justify-between w-full sm:w-auto min-w-[170px] min-h-[44px] px-4 py-2.5 rounded-xl border transition-all outline-none
               ${isRoleFilterOpen 
                 ? 'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-600 dark:text-white' 
                 : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50'}`}
@@ -508,7 +511,7 @@ export default function UsersManagementPage() {
 
         <button 
           onClick={openCreateModal}
-          className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all  shrink-0 h-[46px]"
+          className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 min-h-[44px] w-full sm:w-auto"
         >
           <UserPlus className="w-5 h-5 mr-2 shrink-0" />
           {t('addNewUser') || 'Add New User'}

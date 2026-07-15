@@ -38,7 +38,7 @@ export default function NodesTable({
     <section>
       <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4 px-2">{t('spatialNodesDirectory')}</h2>
       
-      <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
+      <div className="flex flex-col lg:flex-row gap-4 mb-4 relative z-[60] items-stretch lg:items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
           <input 
@@ -46,15 +46,15 @@ export default function NodesTable({
             placeholder={t('searchStation')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all "
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl pl-10 pr-4 py-2.5 min-h-[44px] w-full outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all "
           />
         </div>
 
         {/* Custom Section Filter Dropdown */}
-        <div className="relative z-[70]">
+        <div className="relative z-[70] w-full sm:w-auto">
           <button
             onClick={() => setIsSectionFilterOpen(!isSectionFilterOpen)}
-            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all  outline-none
+            className={`flex items-center justify-between w-full sm:w-auto min-w-[170px] min-h-[44px] px-4 py-2.5 rounded-xl border transition-all outline-none
               ${isSectionFilterOpen 
                 ? 'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-600 dark:text-white' 
                 : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50'}`}
