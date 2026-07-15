@@ -19,15 +19,15 @@ export default function DashboardStats({
   const { t } = useLanguage();
 
   return (
-    <div className="bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800 rounded-[24px] flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800 overflow-hidden">
+    <div className="bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800 rounded-[24px] flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800 overflow-hidden shadow-sm mb-8">
       {/* Total Nodes Card */}
       <div className="flex-1 p-6 flex items-center hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
         {loading ? (
           <>
             <div className="h-[58px] w-[58px] rounded-[24px] bg-zinc-200 dark:bg-zinc-800 animate-pulse shrink-0" />
-            <div className="ml-5 space-y-2 w-full">
+            <div className="ml-5 space-y-1 w-full">
               <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
-              <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
+              <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded mt-1" />
             </div>
           </>
         ) : (
@@ -42,15 +42,15 @@ export default function DashboardStats({
           </>
         )}
       </div>
-      
+
       {/* Total Locations Card */}
       <div className="flex-1 p-6 flex items-center hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
         {loading ? (
           <>
             <div className="h-[58px] w-[58px] rounded-[24px] bg-zinc-200 dark:bg-zinc-800 animate-pulse shrink-0" />
-            <div className="ml-5 space-y-2 w-full">
+            <div className="ml-5 space-y-1 w-full">
               <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
-              <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
+              <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded mt-1" />
             </div>
           </>
         ) : (
@@ -72,9 +72,9 @@ export default function DashboardStats({
           {loading ? (
             <>
               <div className="h-[58px] w-[58px] rounded-[24px] bg-zinc-200 dark:bg-zinc-800 animate-pulse shrink-0" />
-              <div className="ml-5 space-y-2 w-full">
+              <div className="ml-5 space-y-1 w-full">
                 <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
-                <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded" />
+                <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded mt-1" />
               </div>
             </>
           ) : (

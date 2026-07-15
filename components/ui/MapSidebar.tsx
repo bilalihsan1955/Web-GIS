@@ -357,9 +357,9 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
             // Skeleton Loader
             [...Array(6)].map((_, i) => (
               <div key={i} className="bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-4 rounded-xl animate-pulse backdrop-blur-sm">
-                <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4 mb-3"></div>
-                <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-1/2 mb-3"></div>
-                <div className="h-2 bg-slate-100 dark:bg-white/5 rounded w-1/3"></div>
+                <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4 mb-1.5"></div>
+                <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-1/2 mb-1.5"></div>
+                <div className="h-2.5 bg-slate-100 dark:bg-white/5 rounded w-1/3"></div>
               </div>
             ))
           ) : (

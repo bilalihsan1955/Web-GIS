@@ -536,7 +536,13 @@ export default function UsersManagementPage() {
                     <td className="px-6 py-5"><div className="h-6 bg-zinc-200 dark:bg-white/10 rounded-full w-24"></div></td>
                     {userRole === 'superadmin' && <td className="px-6 py-5"><div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-24"></div></td>}
                     <td className="px-6 py-5"><div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-24"></div></td>
-                    <td className="px-6 py-5 text-right"><div className="h-6 bg-zinc-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex items-center justify-end space-x-3">
+                        <div className="h-9 w-24 bg-zinc-200 dark:bg-white/10 rounded-lg"></div>
+                        <div className="h-9 w-20 bg-zinc-200 dark:bg-white/10 rounded-lg"></div>
+                        <div className="h-9 w-24 bg-zinc-200 dark:bg-white/10 rounded-lg"></div>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (

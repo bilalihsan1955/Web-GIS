@@ -15,8 +15,8 @@ export default function LanguageToggle() {
   if (!mounted) {
     return (
       <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl">
-        <div className="h-4 w-4 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
-        <div className="h-4 w-10 rounded bg-slate-200 dark:bg-white/10 animate-pulse" />
+        <div className="h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+        <div className="h-3.5 w-16 rounded bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
       </div>
     );
   }

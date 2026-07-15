@@ -84,19 +84,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* LOGO AREA */}
         <div className="h-16 flex items-center px-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           {isLoadingProfile ? (
-            <div className="w-8 h-8 mr-3 shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800"></div>
+            <div className="w-8 h-8 mr-3 shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg"></div>
           ) : companyProfile?.company_logo ? (
-            <div className="w-8 h-8 mr-3 shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent">
+            <div className="w-8 h-8 mr-3 shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg">
               <img src={companyProfile.company_logo} alt="Logo" className="w-full h-full object-cover" />
             </div>
           ) : (
-            <div className="bg-zinc-950 dark:bg-white mr-3 shrink-0 w-8 h-8 flex items-center justify-center">
+            <div className="bg-zinc-950 dark:bg-white mr-3 shrink-0 w-8 h-8 flex items-center justify-center rounded-lg">
               <Compass className="w-5 h-5 text-white dark:text-zinc-950" />
             </div>
           )}
           
           {isLoadingProfile ? (
-            <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 animate-pulse"></div>
+            <div className="h-5 w-32 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-md"></div>
           ) : (
             <span className="font-bold text-zinc-950 dark:text-white text-base tracking-tight line-clamp-1">
               {companyProfile?.company_name || 'WebGIS Platform'}
@@ -171,8 +171,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex flex-col items-end">
               {loading ? (
                 <>
-                  <div className="h-3 w-24 bg-zinc-200 dark:bg-zinc-800 animate-pulse mb-1.5"></div>
-                  <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800 animate-pulse"></div>
+                  <div className="h-3 w-32 bg-zinc-200 dark:bg-zinc-800 animate-pulse mb-1.5 rounded-sm"></div>
+                  <div className="h-2.5 w-16 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-sm mt-0.5"></div>
                 </>
               ) : (
                 <>

@@ -42,10 +42,10 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
         {loading ? (
           [...Array(6)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-zinc-900 rounded-[24px] p-6 border border-zinc-200 dark:border-zinc-800  animate-pulse flex flex-col h-[180px]">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-white/10"></div>
-                <div className="flex-1 space-y-2 mt-1">
-                  <div className="h-5 bg-zinc-200 dark:bg-white/10 rounded w-3/4"></div>
+              <div className="flex gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-white/10 shrink-0"></div>
+                <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
+                  <div className="h-6 bg-zinc-200 dark:bg-white/10 rounded w-3/4"></div>
                   <div className="h-3 bg-zinc-200 dark:bg-white/10 rounded w-1/2"></div>
                 </div>
               </div>
