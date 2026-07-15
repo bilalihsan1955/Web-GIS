@@ -154,6 +154,12 @@ body {
   filter: invert(1);
 }
 
+/* Hide Mapbox attribution and logo as requested */
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+
 /* ── Leaflet Overrides (inside modal) ─────────────────────────────────── */
 .leaflet-container {
   background: #0a0a1a !important;
