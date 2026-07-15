@@ -10,6 +10,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role, parent_admin_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
+      return NextResponse.json({ error: 'Only admins can create sections' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { name, created_by } = body;
 
@@ -17,12 +27,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Section name is required' }, { status: 400 });
     }
 
+    const targetCreatedBy = roleData.role === 'superadmin' && created_by 
+      ? created_by 
+      : (roleData.parent_admin_id || user.id);
+
     // Insert section
     const { data, error } = await supabase
       .from('company_sections')
       .insert({
         name,
-        created_by: created_by || user.id
+        created_by: targetCreatedBy
       })
       .select()
       .single();

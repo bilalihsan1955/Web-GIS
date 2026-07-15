@@ -70,7 +70,7 @@ export async function PUT(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+    const { data: roleData } = await supabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
     if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }

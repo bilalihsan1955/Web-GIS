@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/server';
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Seeding endpoints are disabled in production' }, { status: 403 });
+  }
+
   try {
     const supabaseAdmin = createAdminClient();
     const results: any[] = [];

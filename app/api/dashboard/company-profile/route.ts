@@ -46,6 +46,10 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
+    if (roleData.role !== 'admin' && roleData.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Forbidden: Only administrators can modify the company profile.' }, { status: 403 });
+    }
+
     // Target the Owner's user_id if this is a Co-Admin or User
     const targetUserId = roleData.parent_admin_id || user.id;
 

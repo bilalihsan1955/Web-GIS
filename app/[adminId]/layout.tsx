@@ -15,7 +15,7 @@ export async function generateMetadata(
     if (uuidRegex.test(adminId)) {
       const { data } = await adminSupabase
         .from('user_roles')
-        .select('company_name, company_description')
+        .select('company_name, company_description, company_slug')
         .eq('user_id', adminId)
         .single();
       
@@ -26,7 +26,7 @@ export async function generateMetadata(
     } else {
       const { data } = await adminSupabase
         .from('user_roles')
-        .select('company_name, company_description')
+        .select('company_name, company_description, company_slug')
         .eq('company_slug', adminId)
         .single();
       profileData = data;

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, MapPin, Layers, Globe2 } from 'lucide-react';
 
 export default function RootLandingPage() {
+  return (
     <div className="h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans text-zinc-900 dark:text-zinc-50 selection:bg-cyan-200 dark:selection:bg-cyan-900 overflow-hidden flex flex-col items-center justify-center relative">
       
       {/* Subtle Background Glow for Professional Polish */}
