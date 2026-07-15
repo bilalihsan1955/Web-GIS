@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { createAdminClient } from '@/utils/supabase/server';
+import { z } from 'zod';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
+
+const updateProfileSchema = z.object({
+  company_name: z.string().min(1).max(255).optional(),
+  company_description: z.string().max(1000).optional().nullable(),
+  company_logo: z.string().url().optional().nullable(),
+});
 
 export async function GET(req: Request) {
   try {
@@ -44,7 +50,11 @@ export async function PUT(req: Request) {
     const targetUserId = roleData.parent_admin_id || user.id;
 
     const body = await req.json();
-    const { company_name, company_description, company_logo } = body;
+    const parsed = updateProfileSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request data', details: parsed.error.format() }, { status: 400 });
+    }
+    const { company_name, company_description, company_logo } = parsed.data;
 
     let company_slug = undefined;
     if (company_name) {

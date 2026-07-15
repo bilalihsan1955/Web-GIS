@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { createAdminClient } from '@/utils/supabase/server';
+import { z } from 'zod';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
+
+const updateUserSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(['user', 'admin', 'superadmin']).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  password: z.string().min(6).optional().or(z.literal('')),
+});
+
+const deleteUserSchema = z.object({
+  userId: z.string().uuid(),
+});
 
 export async function GET() {
   try {
@@ -64,7 +75,13 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
 
-    const { userId, role, email, password } = await req.json();
+    const body = await req.json();
+    const parsed = updateUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request data', details: parsed.error.format() }, { status: 400 });
+    }
+    const { userId, role, email, password } = parsed.data;
+    
     const adminSupabase = createAdminClient();
 
     if (roleData.role === 'admin') {
@@ -117,7 +134,13 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
 
-    const { userId } = await req.json();
+    const body = await req.json();
+    const parsed = deleteUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request data', details: parsed.error.format() }, { status: 400 });
+    }
+    const { userId } = parsed.data;
+
     const adminSupabase = createAdminClient();
     const targetGroupId = roleData.parent_admin_id || user.id;
 

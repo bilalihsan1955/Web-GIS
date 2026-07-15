@@ -13,7 +13,6 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const pathname = usePathname();
-  const router = useRouter();
   const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
@@ -32,10 +31,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
 
-    async function checkAuth() {
-      const { data: { user: currentUser }, error } = await supabase.auth.getUser();
-      if (error || !currentUser) {
-        router.push('/dashboard/login');
+    async function fetchUserData() {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        setLoading(false);
+        setIsLoadingRole(false);
         return;
       }
       setUser(currentUser);
@@ -68,8 +68,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setLoading(false);
     }
     
-    checkAuth();
-  }, [pathname, router, supabase]);
+    fetchUserData();
+  }, [pathname, supabase]);
 
   if (pathname === '/dashboard/login') {
     return <>{children}</>;
