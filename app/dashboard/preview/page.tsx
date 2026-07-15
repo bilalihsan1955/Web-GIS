@@ -89,8 +89,7 @@ export default function PreviewPage() {
         
         {/* Skeleton Buttons */}
         <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-           <div className="h-11 w-11 rounded-xl bg-zinc-300 dark:bg-white/10"></div>
-           <div className="h-11 w-44 rounded-xl bg-zinc-300 dark:bg-white/10"></div>
+           <div className="h-12 w-[180px] rounded-xl bg-zinc-300 dark:bg-white/10"></div>
         </div>
       </div>
     );

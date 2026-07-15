@@ -194,7 +194,8 @@ export function useMapbox() {
 
       // ── HTML Markers for Unclustered Labels ────────────────────────
       map.on('render', () => {
-        if (!map.isSourceLoaded(SOURCE_ID)) return;
+        const source = map.getSource(SOURCE_ID);
+        if (!source || !map.isSourceLoaded(SOURCE_ID)) return;
         
         const currentZoom = map.getZoom();
         const features = map.queryRenderedFeatures({ layers: [LAYER_UNCLUSTERED] });

@@ -1,48 +1,57 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import {
   Layers,
   Compass,
-  Radio,
   Activity,
-  LogIn,
+  Map,
+  Moon,
+  Sun,
+  Navigation
 } from 'lucide-react';
-import Link from 'next/link';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { MAPBOX_STYLE } from '@/lib/constants';
 import MapSidebar from './MapSidebar';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-/**
- * Absolute-positioned glassmorphism overlay panels sitting on top of the map.
- *
- *  ┌─────────────────────────────────────────┐
- *  │  [Logo + Title]            [Actions]    │
- *  │                                         │
- *  │                MAP CANVAS               │
- *  │                                         │
- *  │  [Status bar]                           │
- *  └─────────────────────────────────────────┘
- */
 export default function DashboardShell() {
   const { t } = useLanguage();
   const mapInstance = useDashboardStore((s) => s.mapInstance);
-  const isSatellite = useDashboardStore((s) => s.isSatellite);
-  const setIsSatellite = useDashboardStore((s) => s.setIsSatellite);
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentStyle, setCurrentStyle] = useState(MAPBOX_STYLE);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleResetCompass = () => {
     if (!mapInstance) return;
     mapInstance.easeTo({ bearing: 0, pitch: 0, duration: 1000 });
   };
 
-  const handleToggleLayers = () => {
+  const changeStyle = (styleUrl: string) => {
     if (!mapInstance) return;
-    const newStyle = isSatellite
-      ? 'mapbox://styles/mapbox/dark-v11'
-      : MAPBOX_STYLE;
-    mapInstance.setStyle(newStyle);
-    setIsSatellite(!isSatellite);
+    mapInstance.setStyle(styleUrl);
+    setCurrentStyle(styleUrl);
+    setIsMenuOpen(false);
   };
+
+  const mapStyles = [
+    { name: 'Satelit', url: 'mapbox://styles/mapbox/satellite-v9', icon: <Map className="w-4 h-4" /> },
+    { name: 'Gelap', url: 'mapbox://styles/mapbox/dark-v11', icon: <Moon className="w-4 h-4" /> },
+    { name: 'Terang', url: 'mapbox://styles/mapbox/light-v11', icon: <Sun className="w-4 h-4" /> },
+    { name: 'Jalan', url: 'mapbox://styles/mapbox/streets-v12', icon: <Navigation className="w-4 h-4" /> },
+  ];
 
   return (
     <>
@@ -55,17 +64,35 @@ export default function DashboardShell() {
           {/* Quick action buttons */}
 
           <div
-            className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5"
+            className="glass-panel pointer-events-auto animate-slide-up flex items-center gap-1 p-1.5 relative"
             style={{ animationDelay: '80ms' }}
+            ref={menuRef}
           >
             <button
-              onClick={handleToggleLayers}
-              className="glass-button flex h-9 w-9 items-center justify-center"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className={`glass-button flex h-9 w-9 items-center justify-center ${isMenuOpen ? 'bg-white/10 border-white/40' : ''}`}
               aria-label="Toggle layers"
-              title={isSatellite ? 'Switch to Dark Vector' : 'Switch to Satellite'}
+              title="Pilih mode peta"
             >
-              <Layers className={`h-4 w-4 ${isSatellite ? 'text-text-secondary' : 'text-accent-cyan'}`} />
+              <Layers className="h-4 w-4 text-cyan-400" />
             </button>
+            
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
+              <div className="absolute top-12 right-0 w-40 glass-panel rounded-xl overflow-hidden py-1 shadow-2xl flex flex-col z-50 border border-white/20 animate-fade-in">
+                {mapStyles.map((style) => (
+                  <button
+                    key={style.url}
+                    onClick={() => changeStyle(style.url)}
+                    className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium transition-colors ${currentStyle === style.url ? 'bg-cyan-500/20 text-cyan-300' : 'text-zinc-300 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    {style.icon}
+                    {style.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            
             <button
               onClick={handleResetCompass}
               className="glass-button flex h-9 w-9 items-center justify-center"
