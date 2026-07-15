@@ -38,6 +38,11 @@ export default function PreviewPage() {
   const [hasValidCompany, setHasValidCompany] = useState(false);
   const { userRole, adminGroups, selectedCompanyId, setSelectedCompanyId, loading: dashboardLoading, isRoleLoaded } = useDashboardData();
 
+  const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
+  const activeAdminId = (userRole === 'superadmin' && selectedCompanyId !== 'all') 
+    ? (activeCompany?.company_slug || selectedCompanyId) 
+    : (slug || undefined);
+
   useEffect(() => {
     async function getUserAndProfile() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,9 +76,8 @@ export default function PreviewPage() {
   }, [supabase]);
 
   const handleCopyLink = () => {
-    if (!user) return;
-    const finalSlug = (userRole === 'superadmin' && selectedCompanyId !== 'all') ? selectedCompanyId : slug;
-    const shareUrl = `${window.location.origin}/${finalSlug}`;
+    if (!user || !activeAdminId) return;
+    const shareUrl = `${window.location.origin}/${activeAdminId}`;
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -118,11 +122,6 @@ export default function PreviewPage() {
       </div>
     );
   }
-
-  const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
-  const activeAdminId = (userRole === 'superadmin' && selectedCompanyId !== 'all') 
-    ? (activeCompany?.company_slug || selectedCompanyId) 
-    : (slug || undefined);
 
   const isValidToShare = (userRole === 'superadmin' && selectedCompanyId !== 'all')
     ? !!activeCompany?.company_name
