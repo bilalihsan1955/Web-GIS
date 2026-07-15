@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
 import { Loader2, Share2, Check, Info, Building2, ChevronLeft } from 'lucide-react';
@@ -151,8 +152,7 @@ export default function PreviewPage() {
              <div className="w-px h-6 bg-zinc-700/50"></div>
              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-zinc-800 flex items-center justify-center">
                 {activeCompany?.company_logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activeCompany.company_logo} alt="Logo" className="w-full h-full object-cover" />
+                  <Image src={activeCompany.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
                 ) : (
                   <Building2 className="w-4 h-4 text-zinc-400" />
                 )}

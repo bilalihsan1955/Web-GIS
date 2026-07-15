@@ -1,6 +1,6 @@
 'use client';
 
-import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import { ChevronLeft, Building2, Settings, Layers } from 'lucide-react';
 import SmartUploader from '@/components/admin/SmartUploader';
 import DashboardStats from '@/components/admin/DashboardStats';
@@ -113,8 +113,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4 mt-2">
             <div className="w-12 h-12 bg-zinc-950 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shrink-0 overflow-hidden">
               {activeCompany?.company_logo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} className="w-full h-full object-cover" />
+                <Image src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-cover" />
               ) : (
                 <Building2 className="w-6 h-6" />
               )}
@@ -171,49 +170,39 @@ export default function DashboardPage() {
           openDeleteModal={mutations.openDeleteModal}
         />
 
-      {/* Render Modals securely outside the layout stack */}
-      {isMounted && document.body && createPortal(
-        <ManageSectionsModal
-          isOpen={isManageSectionsModalOpen}
-          onClose={() => setIsManageSectionsModalOpen(false)}
-          adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
-        />,
-        document.body
-      )}
-      {isMounted && document.body && createPortal(
-        <EditNodeModal 
-          adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
-          isOpen={mutations.isEditModalOpen}
-          onClose={() => mutations.setIsEditModalOpen(false)}
-          onSubmit={mutations.handleEditSubmit}
-          modalError={mutations.modalError}
-          modalLoading={mutations.modalLoading}
-          editImagePreview={mutations.editImagePreview}
-          handleEditImageSelect={mutations.handleEditImageSelect}
-          editLocationName={mutations.editLocationName}
-          setEditLocationName={mutations.setEditLocationName}
-          editLocationDescription={mutations.editLocationDescription}
-          setEditLocationDescription={mutations.setEditLocationDescription}
-          editLocationSectionId={mutations.editLocationSectionId}
-          setEditLocationSectionId={mutations.setEditLocationSectionId}
-          editCaptureDate={mutations.editCaptureDate}
-          setEditCaptureDate={mutations.setEditCaptureDate}
-          editIsPublished={mutations.editIsPublished}
-          setEditIsPublished={mutations.setEditIsPublished}
-        />,
-        document.body
-      )}
-      
-      {isMounted && document.body && createPortal(
-        <DeleteNodeModal 
-          isOpen={mutations.isDeleteModalOpen}
-          onClose={() => mutations.setIsDeleteModalOpen(false)}
-          onConfirm={mutations.confirmDeleteNode}
-          deleteError={mutations.deleteError}
-          deleteLoading={mutations.deleteLoading}
-        />,
-        document.body
-      )}
+      {/* Modals (each modal internally manages its own Portal and mounting checks via Modal component) */}
+      <ManageSectionsModal
+        isOpen={isManageSectionsModalOpen}
+        onClose={() => setIsManageSectionsModalOpen(false)}
+        adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
+      />
+      <EditNodeModal 
+        adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
+        isOpen={mutations.isEditModalOpen}
+        onClose={() => mutations.setIsEditModalOpen(false)}
+        onSubmit={mutations.handleEditSubmit}
+        modalError={mutations.modalError}
+        modalLoading={mutations.modalLoading}
+        editImagePreview={mutations.editImagePreview}
+        handleEditImageSelect={mutations.handleEditImageSelect}
+        editLocationName={mutations.editLocationName}
+        setEditLocationName={mutations.setEditLocationName}
+        editLocationDescription={mutations.editLocationDescription}
+        setEditLocationDescription={mutations.setEditLocationDescription}
+        editLocationSectionId={mutations.editLocationSectionId}
+        setEditLocationSectionId={mutations.setEditLocationSectionId}
+        editCaptureDate={mutations.editCaptureDate}
+        setEditCaptureDate={mutations.setEditCaptureDate}
+        editIsPublished={mutations.editIsPublished}
+        setEditIsPublished={mutations.setEditIsPublished}
+      />
+      <DeleteNodeModal 
+        isOpen={mutations.isDeleteModalOpen}
+        onClose={() => mutations.setIsDeleteModalOpen(false)}
+        onConfirm={mutations.confirmDeleteNode}
+        deleteError={mutations.deleteError}
+        deleteLoading={mutations.deleteLoading}
+      />
 
     </div>
   );

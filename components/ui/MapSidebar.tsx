@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Image from 'next/image';
 import { Search, ChevronUp, ChevronDown, Radio, Edit3, X, Check, Layers } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
@@ -209,7 +210,7 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
             <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
           ) : displayIcon ? (
             <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
-              <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
+              <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
             </div>
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
@@ -255,7 +256,7 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
                 <div className="h-9 w-9 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0"></div>
               ) : displayIcon ? (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0">
-                  <img src={displayIcon} className="h-full w-full object-cover" alt={displayName} />
+                  <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
                 </div>
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
@@ -427,7 +428,7 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
                 {compIcon ? (
-                  <img src={compIcon} className="w-full h-full object-cover" alt="Preview" />
+                  <Image src={compIcon} width={56} height={56} className="w-full h-full object-cover" alt="Preview" unoptimized={compIcon.startsWith('blob:') || compIcon.startsWith('data:')} />
                 ) : (
                   <span className="text-[10px] text-zinc-400 text-center leading-tight">Belum Ada Logo</span>
                 )}
@@ -473,21 +474,6 @@ export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminI
         </div>
       , document.body)}
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255,255,255,0.2);
-        }
-      `}</style>
     </div>
   );
 }

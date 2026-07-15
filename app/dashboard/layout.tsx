@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { LayoutDashboard, Users, LogOut, Image as ImageIcon, Loader2, Map, Globe2, Compass } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import LogoutButton from '@/components/auth/LogoutButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname === '/dashboard/login') {
       setLoading(false);
       setIsLoadingRole(false);
+      setIsLoadingProfile(false);
       return;
     }
 
@@ -36,34 +38,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!currentUser) {
         setLoading(false);
         setIsLoadingRole(false);
+        setIsLoadingProfile(false);
         return;
       }
       setUser(currentUser);
 
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', currentUser.id)
-        .single();
-        
-      if (roleData) {
-        setRole(roleData.role);
+      // Parallelize role query & company profile fetch (async-parallel / vercel-react-best-practices)
+      const [roleRes, profileRes] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', currentUser.id)
+          .single(),
+        fetch('/api/dashboard/company-profile').catch(err => {
+          console.error("Failed to fetch company profile", err);
+          return null;
+        })
+      ]);
+
+      if (roleRes?.data) {
+        setRole(roleRes.data.role);
       }
-      
-      try {
-        const profileRes = await fetch('/api/dashboard/company-profile');
-        if (profileRes.ok) {
+
+      if (profileRes && profileRes.ok) {
+        try {
           const profileData = await profileRes.json();
           if (profileData.profile) {
             setCompanyProfile(profileData.profile);
           }
+        } catch (err) {
+          console.error("Failed to parse company profile json", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch company profile", err);
-      } finally {
-        setIsLoadingProfile(false);
       }
 
+      // Batch state updates after parallel fetch completes
+      setIsLoadingProfile(false);
       setIsLoadingRole(false);
       setLoading(false);
     }
@@ -87,7 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-8 h-8 mr-3 shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg"></div>
           ) : companyProfile?.company_logo ? (
             <div className="w-8 h-8 mr-3 shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg">
-              <img src={companyProfile.company_logo} alt="Logo" className="w-full h-full object-cover" />
+              <Image src={companyProfile.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="bg-zinc-950 dark:bg-white mr-3 shrink-0 w-8 h-8 flex items-center justify-center rounded-lg">
