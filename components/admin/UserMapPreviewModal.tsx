@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { X, Loader2, MapPin } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { MAPBOX_STYLE, INITIAL_CENTER } from '@/lib/constants';
+import Modal from '@/components/ui/Modal';
 
 interface UserMapPreviewModalProps {
   isOpen: boolean;
@@ -95,15 +96,15 @@ export default function UserMapPreviewModal({
           nodes.forEach(node => {
             if (node.longitude && node.latitude) {
               const el = document.createElement('div');
-              el.className = 'w-4 h-4 bg-cyan-400 border-2 border-white rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]';
+              el.className = 'w-4 h-4 bg-cyan-400 border-2 border-white rounded-full ';
               
               const loc: any = Array.isArray(node.locations) ? node.locations[0] : node.locations;
               
               const popup = new mapboxgl.Popup({ offset: 15, closeButton: false })
                 .setHTML(`
                   <div class="px-2 py-1">
-                    <div class="text-xs font-bold text-slate-800">${loc?.name || 'Unnamed'}</div>
-                    <div class="text-[10px] text-slate-500">${loc?.description || ''}</div>
+                    <div class="text-xs font-bold text-zinc-800">${loc?.name || 'Unnamed'}</div>
+                    <div class="text-[10px] text-zinc-500">${loc?.description || ''}</div>
                   </div>
                 `);
 
@@ -146,58 +147,52 @@ export default function UserMapPreviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div 
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 rounded-2xl shadow-xl w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col animate-slide-up"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-cyan-600 dark:text-cyan-400" />
-              Map Preview: {userEmail}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {!loading && (
-                <span>Total Nodes: <strong className="text-slate-700 dark:text-slate-300">{nodesCount}</strong></span>
-              )}
-            </p>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex flex-col text-left pr-4">
+          <span className="flex items-center text-zinc-900 dark:text-white">
+            <MapPin className="w-5 h-5 mr-2 text-cyan-600 dark:text-cyan-400" />
+            Map Preview: {userEmail}
+          </span>
+          {!loading && (
+            <span className="text-xs text-zinc-500 font-normal mt-0.5">Total Nodes: <strong className="text-zinc-700 dark:text-zinc-300">{nodesCount}</strong></span>
+          )}
+        </div>
+      }
+      maxWidth="max-w-5xl"
+      noPadding={true}
+    >
+      <div className="w-full h-[65vh] relative bg-zinc-100 dark:bg-zinc-800">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
+            <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Loading map data...</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:text-white dark:hover:bg-white/10 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+        )}
         
-        <div className="flex-1 relative w-full h-full bg-slate-100 dark:bg-slate-800">
-          {loading && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Loading map data...</p>
+        {error && !loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white dark:bg-zinc-900">
+            <div className="text-center p-6 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20 max-w-sm">
+              <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
             </div>
-          )}
-          
-          {error && !loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white dark:bg-slate-900">
-              <div className="text-center p-6 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20 max-w-sm">
-                <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
-              </div>
+          </div>
+        )}
+        
+        {!loading && !error && nodesCount === 0 && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            <div className="text-center p-6 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md rounded-[24px] border border-zinc-200 dark:border-white/10 shadow-lg">
+              <MapPin className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+              <h4 className="text-zinc-800 dark:text-white font-semibold">No Spatial Nodes</h4>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">This user hasn&apos;t uploaded any panoramas yet.</p>
             </div>
-          )}
-          
-          {!loading && !error && nodesCount === 0 && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="text-center p-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
-                <MapPin className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                <h4 className="text-slate-800 dark:text-white font-semibold">No Spatial Nodes</h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">This user hasn&apos;t uploaded any panoramas yet.</p>
-              </div>
-            </div>
-          )}
+          </div>
+        )}
 
-          {/* Map Container */}
-          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
-        </div>
+        {/* Map Container */}
+        <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
       </div>
-    </div>
+    </Modal>
   );
 }

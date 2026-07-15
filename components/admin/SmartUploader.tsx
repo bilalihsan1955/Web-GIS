@@ -7,6 +7,7 @@ import imageCompression from 'browser-image-compression';
 import exifr from 'exifr';
 import { UploadCloud, CheckCircle2, XCircle, Loader2, MapPin, X, Calendar, Edit, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import Modal from '@/components/ui/Modal';
 
 interface FileProgress {
   id: string;
@@ -312,131 +313,124 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
   const activeFileDetails = activeDetailsFileId ? filesProgress.find(f => f.id === activeDetailsFileId) : null;
 
   const modalContent = activeDetailsFileId && activeFileDetails && isMounted ? (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm">
-      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-6 rounded-2xl w-full max-w-lg shadow-sm dark:shadow-2xl animate-slide-up">
-        <button 
-          onClick={handleCancel} 
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors z-[99999] cursor-pointer"
-        >
-          <X className="w-6 h-6" />
-        </button>
-        
-        <div className="border-b border-slate-200 dark:border-white/10 pb-4 mb-6 pr-8">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">Finalize Image Details</h3>
-        </div>
-        
-        <div className="space-y-6">
-          <div className="flex gap-4">
-            <div className="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-white/50 dark:bg-black/40 border border-slate-200 dark:border-white/10 relative shadow-none dark:shadow-inner backdrop-blur-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={activeFileDetails.extractedData?.publicUrl} alt="Preview" className="w-full h-full object-cover" />
+    <Modal
+      isOpen={!!activeDetailsFileId}
+      onClose={handleCancel}
+      title="Finalize Image Details"
+      icon={<Edit className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
+      maxWidth="max-w-lg"
+    >
+      <div className="space-y-6">
+        <div className="flex gap-4">
+          <div className="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-white/50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 relative shadow-inner backdrop-blur-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={activeFileDetails.extractedData?.publicUrl} alt="Preview" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">File Name</p>
+            <p className="text-sm text-zinc-800 dark:text-zinc-300 truncate w-48 font-medium">{activeFileDetails.file.name}</p>
+            
+            <div className="pt-2 flex items-center gap-4 text-xs font-mono text-zinc-600 dark:text-zinc-400 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-zinc-200 dark:border-white/5 backdrop-blur-sm">
+              <span>Lat: {activeFileDetails.extractedData?.latitude?.toFixed(4)}</span>
+              <span>Lng: {activeFileDetails.extractedData?.longitude?.toFixed(4)}</span>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">File Name</p>
-              <p className="text-sm text-slate-800 dark:text-slate-300 truncate w-48 font-medium">{activeFileDetails.file.name}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-300 mb-2 flex items-center">
+              <MapPin className="w-4 h-4 mr-2" /> {t('locationName')}
+            </label>
+            <input 
+              type="text"
+              placeholder={t('locationName') + '…'}
+              value={locationName}
+              onChange={(e) => setLocationName(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all "
+            />
+          </div>
+
+          <div className="relative">
+            <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-300 mb-2 flex items-center">
+              <MapPin className="w-4 h-4 mr-2" /> {t('locationDesc')}
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsSectionDropdownOpen(!isSectionDropdownOpen)}
+                className={`w-full bg-zinc-50 dark:bg-zinc-800 border flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all  outline-none
+                  ${isSectionDropdownOpen ? 'border-cyan-500/50 ring-2 ring-cyan-500/20 text-zinc-900 dark:text-white' : 'border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:border-zinc-300 dark:hover:border-zinc-600'}`}
+              >
+                <span className={locationSectionId ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500 dark:text-white/30'}>
+                  {locationSectionId ? sections.find(s => s.id === locationSectionId)?.name : 'Pilih Sektor...'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-300 ${isSectionDropdownOpen ? 'rotate-180 text-cyan-600 dark:text-cyan-400' : ''}`} />
+              </button>
               
-              <div className="pt-2 flex items-center gap-4 text-xs font-mono text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-slate-200 dark:border-white/5 backdrop-blur-sm">
-                <span>Lat: {activeFileDetails.extractedData?.latitude?.toFixed(4)}</span>
-                <span>Lng: {activeFileDetails.extractedData?.longitude?.toFixed(4)}</span>
-              </div>
+              {isSectionDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[100]" 
+                    onClick={() => setIsSectionDropdownOpen(false)}
+                  />
+                  <div className="absolute z-[101] w-full mt-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-lg animate-fade-in origin-top max-h-48 overflow-y-auto">
+                    {sections.length === 0 ? (
+                      <div className="p-4 text-sm text-center text-zinc-500">
+                        {t('noSections')}
+                      </div>
+                    ) : (
+                      sections.map((section) => (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => {
+                            setLocationSectionId(section.id);
+                            setIsSectionDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-zinc-100 dark:border-white/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-white/10
+                            ${locationSectionId === section.id ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' : 'text-zinc-700 dark:text-zinc-300'}`}
+                        >
+                          {section.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-2 flex items-center">
-                <MapPin className="w-4 h-4 mr-2" /> {t('locationName')}
-              </label>
-              <input 
-                type="text"
-                placeholder={t('locationName') + '...'}
-                value={locationName}
-                onChange={(e) => setLocationName(e.target.value)}
-                className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm"
-              />
-            </div>
-
-            <div className="relative">
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-2 flex items-center">
-                <MapPin className="w-4 h-4 mr-2" /> {t('locationDesc')}
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsSectionDropdownOpen(!isSectionDropdownOpen)}
-                  className={`w-full bg-white/60 dark:bg-black/40 border flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all shadow-none dark:shadow-inner outline-none backdrop-blur-sm
-                    ${isSectionDropdownOpen ? 'border-cyan-500/50 ring-2 ring-cyan-500/20 text-slate-900 dark:text-white' : 'border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:border-slate-300 dark:hover:border-white/20'}`}
-                >
-                  <span className={locationSectionId ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-500 dark:text-white/30'}>
-                    {locationSectionId ? sections.find(s => s.id === locationSectionId)?.name : 'Pilih Sektor...'}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-300 ${isSectionDropdownOpen ? 'rotate-180 text-cyan-600 dark:text-cyan-400' : ''}`} />
-                </button>
-                
-                {isSectionDropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-[100]" 
-                      onClick={() => setIsSectionDropdownOpen(false)}
-                    />
-                    <div className="absolute z-[101] w-full mt-2 bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top max-h-48 overflow-y-auto">
-                      {sections.length === 0 ? (
-                        <div className="p-4 text-sm text-center text-slate-500">
-                          {t('noSections')}
-                        </div>
-                      ) : (
-                        sections.map((section) => (
-                          <button
-                            key={section.id}
-                            type="button"
-                            onClick={() => {
-                              setLocationSectionId(section.id);
-                              setIsSectionDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
-                              ${locationSectionId === section.id ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}
-                          >
-                            {section.name}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-2 flex items-center">
-                <Calendar className="w-4 h-4 mr-2" /> Capture Date
-              </label>
-              <input 
-                type="date"
-                value={editCaptureDate}
-                onChange={(e) => setEditCaptureDate(e.target.value)}
-                className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-300 mb-2 flex items-center">
+              <Calendar className="w-4 h-4 mr-2" /> Capture Date
+            </label>
+            <input 
+              type="date"
+              value={editCaptureDate}
+              onChange={(e) => setEditCaptureDate(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all "
+            />
           </div>
         </div>
 
         <div className="pt-6 flex justify-end space-x-3 mt-2">
           <button 
             onClick={handleCancel} 
-            className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"
+            className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
           >
             {t('cancel')}
           </button>
           <button 
             onClick={saveNodeToDatabase}
             disabled={!locationName.trim()}
-            className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-all flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10"
+            className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all flex items-center disabled:opacity-50 shadow-lg shadow-cyan-500/20 active:scale-95"
           >
             {t('save')}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   ) : null;
 
   return (
@@ -447,10 +441,10 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
-        className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-300 backdrop-blur-sm ${
+        className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-[24px] transition-all duration-300  ${
           isDragging 
-            ? 'border-cyan-400 bg-cyan-50/80 dark:bg-cyan-400/10 shadow-[inset_0_0_50px_rgba(34,211,238,0.1)]' 
-            : 'border-slate-300 dark:border-white/20 bg-white/70 dark:bg-slate-900/40 hover:border-cyan-400/50 hover:bg-white/90 dark:hover:bg-white/10'
+            ? 'border-cyan-400 bg-zinc-100 dark:bg-zinc-800' 
+            : 'border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800'
         }`}
       >
         <input 
@@ -460,34 +454,34 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
           onChange={handleFileInput}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
-        <div className={`p-4 rounded-full mb-5 pointer-events-none transition-colors border backdrop-blur-sm ${isDragging ? 'bg-cyan-50/80 dark:bg-cyan-500/20 border-cyan-200 dark:border-cyan-500/30' : 'bg-white/50 dark:bg-white/5 border-slate-200 dark:border-white/10'}`}>
-          <UploadCloud className={`w-10 h-10 ${isDragging ? 'text-cyan-600 dark:text-cyan-300' : 'text-slate-500'}`} />
+        <div className={`p-4 rounded-full mb-5 pointer-events-none transition-colors border ${isDragging ? 'bg-white dark:bg-zinc-700 border-cyan-300 dark:border-cyan-600' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'}`}>
+          <UploadCloud className={`w-10 h-10 ${isDragging ? 'text-cyan-600 dark:text-cyan-400' : 'text-zinc-400'}`} />
         </div>
-        <h4 className="text-xl font-bold text-slate-900 dark:text-white pointer-events-none tracking-tight">
+        <h4 className="text-xl font-bold text-zinc-900 dark:text-white pointer-events-none tracking-tight">
           Drag & drop 360° panoramas here
         </h4>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 text-center max-w-md pointer-events-none leading-relaxed drop-shadow-sm">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 text-center max-w-md pointer-events-none leading-relaxed ">
           JPEG/PNG. Files will be uploaded and GPS metadata extracted. You will be prompted to verify details before saving.
         </p>
       </div>
 
       {/* ── File Progress Queue ── */}
       {filesProgress.length > 0 && (
-        <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl rounded-2xl shadow-none dark:shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-200 dark:border-white/10 bg-white/50 dark:bg-black/20 flex items-center justify-between backdrop-blur-sm">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-wide drop-shadow-sm dark:drop-shadow-md">
+        <div className="bg-white dark:bg-zinc-900 rounded-[24px]  border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-wide ">
               Upload Queue 
             </h3>
-            <span className="bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 text-xs px-2.5 py-1 rounded-full font-bold border border-cyan-200 dark:border-cyan-500/20 shadow-none dark:shadow-sm">
+            <span className="bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 text-xs px-2.5 py-1 rounded-full font-bold border border-cyan-200 dark:border-cyan-500/20 ">
               {filesProgress.filter(f => f.status === 'success').length} / {filesProgress.length}
             </span>
           </div>
-          <ul className="divide-y divide-slate-100 dark:divide-white/5 max-h-[400px] overflow-y-auto custom-scrollbar">
+          <ul className="divide-y divide-zinc-100 dark:divide-white/5 max-h-[400px] overflow-y-auto custom-scrollbar">
             {filesProgress.map((fp) => (
               <li key={fp.id} className="p-5 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                 <div className="flex-1 min-w-0 mr-6">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate pr-4 drop-shadow-sm">{fp.file.name}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate pr-4 ">{fp.file.name}</p>
                     <span className={`text-[11px] font-bold capitalize ${
                       fp.status === 'error' ? 'text-red-400' : 
                       fp.status === 'success' ? 'text-emerald-400' : 
@@ -500,9 +494,9 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                   
                   {/* Progress Bar */}
                   {(fp.status === 'compressing' || fp.status === 'uploading' || fp.status === 'pending') && (
-                    <div className="w-full bg-slate-200/50 dark:bg-black/40 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-200 dark:border-white/5 backdrop-blur-sm">
+                    <div className="w-full bg-zinc-200/50 dark:bg-black/40 rounded-full h-1.5 mt-2 overflow-hidden border border-zinc-200 dark:border-white/5 backdrop-blur-sm">
                       <div 
-                        className="bg-cyan-500 dark:bg-cyan-400 h-1.5 rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(34,211,238,0.5)]" 
+                        className="bg-cyan-500 dark:bg-cyan-400 h-1.5 rounded-full transition-all duration-300 ease-out " 
                         style={{ width: `${fp.progress}%` }}
                       />
                     </div>
@@ -515,8 +509,8 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                 </div>
                 
                 <div className="flex items-center justify-center space-x-3 shrink-0">
-                  {fp.status === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-400 drop-shadow-md" />}
-                  {fp.status === 'error' && <AlertTriangle className="w-6 h-6 text-red-400 drop-shadow-md" />}
+                  {fp.status === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-400 shadow-md" />}
+                  {fp.status === 'error' && <AlertTriangle className="w-6 h-6 text-red-400 shadow-md" />}
                   {fp.status === 'needs_details' && (
                     <button 
                       onClick={() => {
@@ -537,7 +531,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                   {/* Remove/Cancel Item Button */}
                   <button 
                     onClick={() => handleRemoveFromQueue(fp.id)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 p-1.5 rounded-lg transition-colors shadow-none"
+                    className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 p-1.5 rounded-lg transition-colors shadow-none"
                     title="Remove from queue"
                   >
                     <X className="w-5 h-5" />

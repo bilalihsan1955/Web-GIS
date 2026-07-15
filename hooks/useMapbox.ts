@@ -394,9 +394,18 @@ export function useMapbox() {
     return () => {
       Object.values(markersRef.current).forEach(marker => marker.remove());
       markersRef.current = {};
-      map.remove();
       mapRef.current = null;
       setMapInstance(null);
+      
+      // Delay removal to allow Mapbox workers and async requests to complete
+      // avoiding 'this.errorCb is not a function' crashes during unmount.
+      setTimeout(() => {
+        try {
+          map.remove();
+        } catch (e) {
+          console.error('[useMapbox] Graceful unmount error:', e);
+        }
+      }, 250);
     };
   }, [setupLayers, setupInteractions, setMapInstance]);
 

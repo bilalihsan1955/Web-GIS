@@ -64,16 +64,41 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
 
-    const { userId, role } = await req.json();
+    const { userId, role, email, password } = await req.json();
     const adminSupabase = createAdminClient();
 
-    // Only superadmin can change user roles
-    if (roleData.role !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden: Only Super Admin can change user roles' }, { status: 403 });
+    if (roleData.role === 'admin') {
+      // Verify target user belongs to admin's group
+      const targetGroupId = roleData.parent_admin_id || user.id;
+      const { data: targetRole } = await adminSupabase.from('user_roles').select('parent_admin_id').eq('user_id', userId).single();
+      
+      if (targetRole?.parent_admin_id !== targetGroupId && userId !== targetGroupId) {
+         return NextResponse.json({ error: 'Forbidden: You can only edit users in your group' }, { status: 403 });
+      }
+      // Admins cannot change someone to superadmin
+      if (role === 'superadmin') {
+         return NextResponse.json({ error: 'Forbidden: Cannot elevate role to superadmin' }, { status: 403 });
+      }
     }
 
-    const { error } = await adminSupabase.from('user_roles').update({ role }).eq('user_id', userId);
-    if (error) throw error;
+    // 1. Update Auth data (email, password)
+    const authUpdatePayload: any = {};
+    if (email) authUpdatePayload.email = email;
+    if (password) authUpdatePayload.password = password;
+    
+    if (Object.keys(authUpdatePayload).length > 0) {
+      const { error: updateAuthError } = await adminSupabase.auth.admin.updateUserById(
+        userId,
+        authUpdatePayload
+      );
+      if (updateAuthError) throw updateAuthError;
+    }
+
+    // 2. Update Role
+    if (role) {
+      const { error: roleError } = await adminSupabase.from('user_roles').update({ role }).eq('user_id', userId);
+      if (roleError) throw roleError;
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

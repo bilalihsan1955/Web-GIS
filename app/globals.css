@@ -17,7 +17,8 @@
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-jakarta-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 /* ── Base Reset ───────────────────────────────────────────────────────── */

@@ -9,10 +9,11 @@ import { useDashboardStore } from '@/store/useDashboardStore';
 import { createClient } from '@/utils/supabase/client';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
+import Modal from '@/components/ui/Modal';
 
-export default function MapSidebar() {
+export default function MapSidebar({ adminIdOverride, forceDashboard }: { adminIdOverride?: string, forceDashboard?: boolean } = {}) {
   const params = useParams();
-  const adminId = params.adminId as string;
+  const adminId = adminIdOverride || (params.adminId as string);
   const companyProfiles = useMapStore((s) => s.companyProfiles);
   const [userId, setUserId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -26,14 +27,14 @@ export default function MapSidebar() {
   const [compDesc, setCompDesc] = useState('');
   const [compIcon, setCompIcon] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const isDashboard = !adminId;
+  const isDashboard = forceDashboard !== undefined ? forceDashboard : !adminId;
   const { t } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
     const supabase = createClient();
     async function getSessionAndProfile() {
-      if (adminId) {
+      if (adminId && !forceDashboard) {
         // We are on the public guest page, fetch using public API
         try {
           const res = await fetch(`/api/public/company-profile?slug=${adminId}`);
@@ -46,24 +47,30 @@ export default function MapSidebar() {
         }
       } else {
         // We are inside the dashboard, fetch using dashboard API
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserId(user.id);
-          try {
-            const res = await fetch('/api/dashboard/company-profile');
-            if (res.ok) {
-              const data = await res.json();
-              if (data.profile) setProfile(data.profile);
-            }
-          } catch (err) {
-            console.error('Error fetching dashboard profile:', err);
+        // if forceDashboard is true but adminId is present, we still want to fetch dashboard API
+        // WAIT: if forceDashboard is true but adminIdOverride is passed (Superadmin viewing specific company),
+        // we should probably fetch the specific company profile?
+        // Wait! `/api/dashboard/company-profile` fetches the profile of the current logged-in user.
+        // If superadmin is viewing a specific company, `/api/dashboard/company-profile` might return the superadmin's profile, NOT the target company's profile.
+        // Let's use the public API if we are forcing dashboard but have an adminId, OR we should pass adminId to dashboard API.
+        try {
+          let url = '/api/dashboard/company-profile';
+          if (forceDashboard && adminId) {
+            url = `/api/public/company-profile?slug=${adminId}`;
           }
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile) setProfile(data.profile);
+          }
+        } catch (err) {
+          console.error('Error fetching profile:', err);
         }
       }
       setIsLoadingProfile(false);
     }
     getSessionAndProfile();
-  }, [adminId]);
+  }, [adminId, forceDashboard]);
 
   const handleOpenEdit = () => {
     setCompName(profile?.company_name || '');
@@ -330,8 +337,8 @@ export default function MapSidebar() {
                   onClick={() => setActiveSection(sec)}
                   className={`px-4 py-1.5 rounded-full text-[11px] font-bold tracking-wider transition-all duration-300
                     ${isActive 
-                      ? 'bg-cyan-500 text-white dark:bg-cyan-400 dark:text-slate-900 shadow-none dark:shadow-[0_0_15px_rgba(34,211,238,0.4)]' 
-                      : 'bg-transparent border border-slate-300 dark:border-white/20 text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-white/40 hover:text-slate-900 dark:hover:text-white'}`}
+                      ? 'bg-cyan-500 text-white dark:bg-cyan-400 dark:text-slate-900 shadow-sm' 
+                      : 'bg-white/60 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-cyan-400 hover:bg-slate-50/50 dark:hover:bg-white/5'}`}
                 >
                   {getSectionLabel(sec)}
                 </button>
@@ -385,75 +392,71 @@ export default function MapSidebar() {
         </div>
       </div>
 
-      {/* Edit Profile Modal using Portal */}
-      {isEditModalOpen && mounted && document.body && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm px-4 pointer-events-auto">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col gap-5 animate-slide-up relative">
-            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-white/10 pb-3">
-              {t('editProfile')}
-            </h3>
-            
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Nama Perusahaan</label>
-              <input 
-                type="text" 
-                value={compName} 
-                onChange={(e) => setCompName(e.target.value)}
-                placeholder="e.g. PT Mencari Cinta Sejati"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
-              />
-            </div>
+      {/* Edit Profile Modal using Reusable Component */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={t('editProfile')}
+        icon={<Edit3 className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Nama Perusahaan</label>
+            <input 
+              type="text" 
+              value={compName} 
+              onChange={(e) => setCompName(e.target.value)}
+              placeholder="e.g. PT Nusantara Teknologi Spasial"
+              className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-sm text-zinc-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+            />
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Deskripsi / Tagline</label>
-              <input 
-                type="text" 
-                value={compDesc} 
-                onChange={(e) => setCompDesc(e.target.value)}
-                placeholder="e.g. Real-time Node Monitoring"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Deskripsi / Tagline</label>
+            <input 
+              type="text" 
+              value={compDesc} 
+              onChange={(e) => setCompDesc(e.target.value)}
+              placeholder="e.g. Real-time Node Monitoring"
+              className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-sm text-zinc-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+            />
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Logo Perusahaan</label>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                  {compIcon ? (
-                    <img src={compIcon} className="w-full h-full object-cover" alt="Preview" />
-                  ) : (
-                    <span className="text-[10px] text-slate-400 text-center leading-tight">Belum Ada Logo</span>
-                  )}
-                </div>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={handleIconChange}
-                  className="text-[11px] text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-cyan-50 file:text-cyan-700 dark:file:bg-cyan-500/20 dark:file:text-cyan-400 hover:file:bg-cyan-100 cursor-pointer"
-                />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Logo Perusahaan</label>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                {compIcon ? (
+                  <img src={compIcon} className="w-full h-full object-cover" alt="Preview" />
+                ) : (
+                  <span className="text-[10px] text-zinc-400 text-center leading-tight">Belum Ada Logo</span>
+                )}
               </div>
-            </div>
-
-            <div className="flex gap-3 justify-end mt-4">
-              <button 
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
-              >
-                {t('cancel')}
-              </button>
-              <button 
-                onClick={handleSaveProfile}
-                className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
-              >
-                {t('save')}
-              </button>
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={handleIconChange}
+                className="text-[11px] text-zinc-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-cyan-50 file:text-cyan-700 dark:file:bg-cyan-500/20 dark:file:text-cyan-400 hover:file:bg-cyan-100 cursor-pointer transition-colors"
+              />
             </div>
           </div>
+
+          <div className="flex gap-3 justify-end mt-4">
+            <button 
+              onClick={() => setIsEditModalOpen(false)}
+              className="flex-1 px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button 
+              onClick={handleSaveProfile}
+              className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+            >
+              {t('save')}
+            </button>
+          </div>
         </div>
-      , document.body)}
+      </Modal>
 
       {isManageSectionsOpen && mounted && document.body && createPortal(
         <ManageSectionsModal 

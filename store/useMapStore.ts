@@ -42,8 +42,8 @@ export const ADMIN_SLUG_MAP: Record<string, string> = {
 const getInitialProfiles = (): Record<string, CompanyProfile> => {
   const defaults: Record<string, CompanyProfile> = {
     'pt-mencari-cinta-sejati': {
-      name: 'PT Mencari Cinta Sejati',
-      description: 'Menemukan titik koordinat cinta sejati Anda',
+      name: 'PT Nusantara Teknologi Spasial',
+      description: 'Pemetaan Aset dan Infrastruktur Spasial Nasional',
       iconUrl: '',
     },
     'admin-ub': {

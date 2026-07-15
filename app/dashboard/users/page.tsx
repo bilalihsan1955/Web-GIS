@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createClient } from '@/utils/supabase/client';
-import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown, Map } from 'lucide-react';
+import { ShieldAlert, Plus, Edit, Trash2, Loader2, UserCog, CheckCircle2, X, Eye, EyeOff, Search, ChevronDown, Map, UserPlus, AlertCircle, ChevronLeft } from 'lucide-react';
 import UserMapPreviewModal from '@/components/admin/UserMapPreviewModal';
+import CompanyGrid from '@/components/admin/CompanyGrid';
+import { useDashboardStore } from '@/store/useDashboardStore';
+import Modal from '@/components/ui/Modal';
 
 interface AppUser {
   id: string;
@@ -24,6 +27,10 @@ export default function UsersManagementPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
+  const setSelectedCompanyId = useDashboardStore((s) => s.setSelectedCompanyId);
+  const [adminGroups, setAdminGroups] = useState<{user_id: string, company_name: string | null, email: string, company_logo: string | null, company_slug: string | null}[]>([]);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -68,6 +75,19 @@ export default function UsersManagementPage() {
 
     setIsAdmin(true);
     setUserRole(roleData.role);
+
+    if (roleData.role === 'superadmin') {
+      const { data: admins } = await supabase
+        .from('user_roles')
+        .select('user_id, company_name, email, company_logo, company_slug')
+        .eq('role', 'admin')
+        .is('parent_admin_id', null)
+        .order('company_name', { ascending: true });
+      if (admins) {
+        setAdminGroups(admins);
+      }
+    }
+
     fetchUsers();
   }
 
@@ -91,10 +111,12 @@ export default function UsersManagementPage() {
     setModalError('');
 
     try {
+      const parentAdminId = userRole === 'superadmin' && selectedCompanyId !== 'all' ? selectedCompanyId : null;
+      
       const res = await fetch('/api/dashboard/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role })
+        body: JSON.stringify({ email, password, role, parentAdminId })
       });
       const data = await res.json();
 
@@ -120,7 +142,7 @@ export default function UsersManagementPage() {
       const res = await fetch('/api/dashboard/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUser.id, role })
+        body: JSON.stringify({ userId: selectedUser.id, role, email, password: password || undefined })
       });
       const data = await res.json();
 
@@ -185,6 +207,8 @@ export default function UsersManagementPage() {
 
   const openEditModal = (u: AppUser) => {
     setSelectedUser(u);
+    setEmail(u.email);
+    setPassword('');
     setRole(u.role);
     setModalError('');
     setIsEditModalOpen(true);
@@ -199,198 +223,248 @@ export default function UsersManagementPage() {
   if (isAdmin === false) {
     return (
       <div className="flex h-full min-h-[80vh] flex-col items-center justify-center p-8 text-center">
-        <div className="bg-red-500/20 border border-red-500/30 p-6 rounded-full mb-6 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-          <ShieldAlert className="h-16 w-16 text-red-400" />
+        <div className="bg-red-500/20 border border-red-500/30 p-6 rounded-full mb-6 shadow-inner">
+          <AlertCircle className="w-12 h-12 text-red-500" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 drop-shadow-sm dark:drop-shadow-md">{t('accessDenied') || 'Access Denied'}</h1>
-        <p className="text-slate-300 max-w-md mx-auto">
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2 drop- dark:">{t('accessDenied') || 'Access Denied'}</h1>
+        <p className="text-zinc-300 max-w-md mx-auto">
           You do not have the required Super Admin privileges to view or manage system users.
         </p>
       </div>
     );
   }
 
-  const createModalContent = isCreateModalOpen && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('createNewUser') || 'Create New User'}</h3>
-          <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
-            <X className="w-6 h-6" />
+  const createModalContent = (
+    <Modal
+      isOpen={isCreateModalOpen}
+      onClose={() => setIsCreateModalOpen(false)}
+      title={t('createNewUser') || 'Create New User'}
+      icon={<UserPlus className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
+      maxWidth="max-w-md"
+    >
+      <form onSubmit={handleCreateUser} className="space-y-4">
+        {modalError && (
+          <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20">
+            {modalError}
+          </div>
+        )}
+        <div>
+          <input required type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false} autoComplete="off" placeholder={t('emailAddress') || 'Email Address'} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all " />
+        </div>
+        <div className="relative">
+          <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('temporaryPassword') || 'Temporary Password'} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl px-4 py-3 pr-12 focus:ring-1 focus:ring-cyan-500 outline-none transition-all " />
+          <button 
+            type="button" 
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-400 hover:text-cyan-400 transition-colors"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
-        <form onSubmit={handleCreateUser} className="space-y-5">
-          {modalError && (
-            <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20">
-              {modalError}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('emailAddress') || 'Email Address'}</label>
-            <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('temporaryPassword') || 'Temporary Password'}</label>
-            <div className="relative">
-              <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-white/60 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/30 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all shadow-none dark:shadow-inner backdrop-blur-sm" />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-cyan-400 transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('systemRole') || 'System Role'}</label>
-          {userRole === 'superadmin' ? (
-            <div>
-              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('admin360') || 'Admin (360 Map Management)'}</option>
-                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
-              </select>
-            </div>
-          ) : (
-            <div>
-              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
-              </select>
-            </div>
-          )}
-          </div>
-          <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">{t('cancel') || 'Cancel'}</button>
-            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
-              {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              {t('createNewUser') || 'Create Account'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-
-  const editModalContent = isEditModalOpen && selectedUser && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-md overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('editUserRole') || 'Edit User Role'}</h3>
-          <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
-            <X className="w-6 h-6" />
+        <div>
+        {userRole === 'superadmin' ? (
+          <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all appearance-none cursor-pointer">
+            <option value="user" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+            <option value="admin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">
+              {selectedCompanyId !== 'all' ? (t('coAdminCompanyLevel') || 'Co-Admin (Company Level)') : (t('adminNewCompany') || 'Admin (New Company Owner)')}
+            </option>
+            {selectedCompanyId === 'all' && (
+              <option value="superadmin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
+            )}
+          </select>
+        ) : (
+          <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all appearance-none cursor-pointer">
+            <option value="user" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+            <option value="admin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
+          </select>
+        )}
+        </div>
+        <div className="pt-2 flex justify-end space-x-2">
+          <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
+          <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
+            {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+            {t('createNewUser') || 'Create Account'}
           </button>
         </div>
-        <form onSubmit={handleEditRole} className="space-y-5">
-          {modalError && (
-            <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20">
-              {modalError}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('accountEmail') || 'Account Email'}</label>
-            <input type="text" value={selectedUser.email} disabled className="w-full bg-slate-100/60 dark:bg-black/40 border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 rounded-xl px-4 py-3 outline-none cursor-not-allowed shadow-none dark:shadow-inner backdrop-blur-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-300 mb-1.5">{t('systemRole') || 'System Role'}</label>
-          {userRole === 'superadmin' ? (
-            <div>
-              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('admin360') || 'Admin (360 Map Management)'}</option>
-                <option value="superadmin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
-              </select>
-            </div>
-          ) : (
-            <div>
-              <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none shadow-none dark:shadow-inner backdrop-blur-sm">
-                <option value="user" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
-                <option value="admin" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
-              </select>
-            </div>
-          )}
-          </div>
-          <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">{t('cancel') || 'Cancel'}</button>
-            <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-500/30 transition-colors flex items-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-cyan-500/10">
-              {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              {t('saveChanges') || 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 
-  const deleteModalContent = isDeleteModalOpen && userToDelete && (
-    <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center bg-slate-900/40 dark:bg-black/70 backdrop-blur-md p-4">
-      <div className="relative z-[100000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/20 p-8 rounded-2xl shadow-sm dark:shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30 mb-2">
+  const editModalContent = selectedUser && (
+    <Modal
+      isOpen={isEditModalOpen}
+      onClose={() => setIsEditModalOpen(false)}
+      title={t('editUser') || 'Edit User'}
+      icon={<UserCog className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
+      maxWidth="max-w-md"
+    >
+      <form onSubmit={handleEditRole} className="space-y-4">
+        {modalError && (
+          <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20">
+            {modalError}
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1 ml-1">{t('emailAddress') || 'Email Address'}</label>
+          <input required type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false} autoComplete="off" placeholder={t('emailAddress') || 'Email Address'} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all " />
+        </div>
+        <div className="relative">
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1 ml-1">New Password (Optional)</label>
+          <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Leave blank to keep current password" className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl px-4 py-3 pr-12 focus:ring-1 focus:ring-cyan-500 outline-none transition-all " />
+          <button 
+            type="button" 
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 bottom-0 right-0 pr-4 flex items-center text-zinc-400 hover:text-cyan-400 transition-colors pt-5"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1 ml-1">{t('role') || 'Role'}</label>
+        {userRole === 'superadmin' ? (
+          <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all appearance-none cursor-pointer">
+            <option value="user" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+            <option value="admin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('admin360') || 'Admin (360 Map Management)'}</option>
+            <option value="superadmin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('superAdminAccess') || 'Super Admin (System Access)'}</option>
+          </select>
+        ) : (
+          <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white rounded-xl px-4 py-3 focus:ring-1 focus:ring-cyan-500 outline-none transition-all appearance-none cursor-pointer">
+            <option value="user" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('userStandardAccess') || 'User (Standard Access)'}</option>
+            <option value="admin" className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white">{t('coAdminAccess') || 'Co-Admin (Manage Group Maps)'}</option>
+          </select>
+        )}
+        </div>
+        <div className="pt-2 flex justify-end space-x-2">
+          <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-sm">{t('cancel') || 'Cancel'}</button>
+          <button type="submit" disabled={modalLoading} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center disabled:opacity-50 text-sm">
+            {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+            {t('saveChanges') || 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+
+  const deleteModalContent = userToDelete && (
+    <Modal
+      isOpen={isDeleteModalOpen}
+      onClose={() => setIsDeleteModalOpen(false)}
+      title={t('confirmDeletion') || 'Confirm Deletion'}
+      icon={<AlertCircle className="w-5 h-5 text-red-500" />}
+      maxWidth="max-w-sm"
+    >
+      <div className="space-y-4">
+        <div className="flex justify-center mb-6 mt-2">
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-[20px] flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30">
             <Trash2 className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('confirmDeletion') || 'Confirm Deletion'}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 drop-shadow-sm leading-relaxed">
-            Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
-          </p>
+        </div>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed text-center">
+          Are you sure you want to permanently delete <strong className="text-zinc-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
+        </p>
 
-          {modalError && (
-            <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20 text-left">
-              {modalError}
-            </div>
-          )}
-
-          <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
-              onClick={() => setIsDeleteModalOpen(false)} 
-              disabled={modalLoading}
-              className="flex-1 px-5 py-2.5 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
-            >
-              {t('cancel') || 'Cancel'}
-            </button>
-            <button 
-              onClick={confirmDeleteUser}
-              disabled={modalLoading}
-              className="flex-1 px-5 py-2.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 shadow-none dark:shadow-lg dark:shadow-red-500/10"
-            >
-              {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              {t('delete') || 'Delete'}
-            </button>
+        {modalError && (
+          <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20 text-left">
+            {modalError}
           </div>
+        )}
+
+        <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+          <button 
+            onClick={() => setIsDeleteModalOpen(false)} 
+            disabled={modalLoading}
+            className="flex-1 px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
+          >
+            {t('cancel') || 'Cancel'}
+          </button>
+          <button 
+            onClick={confirmDeleteUser}
+            disabled={modalLoading}
+            className="flex-1 px-5 py-2.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 "
+          >
+            {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+            {t('delete') || 'Delete'}
+          </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 
   const filteredUsers = users.filter(user => {
+    if (userRole === 'superadmin' && selectedCompanyId !== 'all') {
+      if (user.parent_admin_id !== selectedCompanyId && user.id !== selectedCompanyId) {
+        return false;
+      }
+    }
     const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           user.role.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter ? user.role.toLowerCase() === roleFilter.toLowerCase() : true;
     return matchesSearch && matchesRole;
   });
 
+  if (userRole === 'superadmin' && selectedCompanyId === 'all') {
+    return (
+      <div className="animate-fade-in pb-12 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 p-5 ">
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white">{t('globalUserManagement') || 'Manajemen Pengguna Global'}</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t('selectCompanyToViewUsers') || 'Pilih salah satu perusahaan di bawah ini untuk melihat pengguna/karyawannya.'}</p>
+          </div>
+          <button 
+            onClick={openCreateModal}
+            className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all  shrink-0"
+          >
+            <UserPlus className="w-5 h-5 mr-2 shrink-0" />
+            {t('addNewCompanyAdmin') || 'Tambah Perusahaan Baru (Admin)'}
+          </button>
+        </div>
+        <CompanyGrid adminGroups={adminGroups} onSelect={setSelectedCompanyId} loading={loading} />
+        {isMounted && document.body && createPortal(createModalContent, document.body)}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-12 font-sans relative">
       
       {/* Top Level Error Display for non-modal actions */}
       {modalError && !isCreateModalOpen && !isEditModalOpen && !isDeleteModalOpen && (
-        <div className="bg-red-500/10 text-red-400 p-4 rounded-xl border border-red-500/20 shadow-none flex justify-between items-center">
+        <div className="bg-red-500/10 text-red-400 p-4 rounded-xl border border-red-500/20  flex justify-between items-center">
           <span>{modalError}</span>
           <button onClick={() => setModalError('')} className="hover:text-red-300"><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {userRole === 'superadmin' && selectedCompanyId !== 'all' && (
+        <div className="flex flex-col gap-3 mb-2">
+          <button 
+            onClick={() => setSelectedCompanyId('all')}
+            className="group flex items-center text-sm font-medium text-zinc-500 hover:text-cyan-600 dark:text-zinc-400 dark:hover:text-cyan-400 transition-colors w-fit bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-white/10"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+            {t('backToCompanies') || 'Kembali ke Daftar Perusahaan'}
+          </button>
+          <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/5 dark:to-blue-500/5 border border-cyan-200 dark:border-cyan-500/20 rounded-xl p-4 flex items-center gap-3">
+            <ShieldAlert className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {t('managingSpecificCompany') || 'Anda sedang mengelola pengguna untuk satu perusahaan tertentu secara eksklusif.'}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Page Context Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 relative z-[60] items-center">
         <div className="relative w-full flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
           <input 
             type="text" 
             placeholder={t('searchUsers') || 'Search users by email or role...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-none dark:shadow-inner"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 rounded-xl pl-10 pr-4 py-2.5 w-full outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all "
           />
         </div>
 
@@ -398,19 +472,19 @@ export default function UsersManagementPage() {
         <div className="relative z-[70]">
           <button
             onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all backdrop-blur-md shadow-none dark:shadow-inner outline-none
+            className={`flex items-center justify-between min-w-[170px] h-full px-4 py-2.5 rounded-xl border transition-all  outline-none
               ${isRoleFilterOpen 
-                ? 'bg-cyan-50 border-cyan-300 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/50 dark:text-cyan-400' 
-                : 'bg-white/70 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white/90 dark:bg-slate-900/50 dark:border-white/20 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/5'}`}
+                ? 'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-600 dark:text-white' 
+                : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50'}`}
           >
             <span className="font-medium text-sm">{roleFilter ? (roleFilter === 'admin' ? 'Admin' : 'User') : 'All Roles'}</span>
-            <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isRoleFilterOpen ? 'text-cyan-600 dark:text-cyan-400 rotate-180' : 'text-slate-400'}`} />
+            <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-300 ${isRoleFilterOpen ? 'text-cyan-600 dark:text-cyan-400 rotate-180' : 'text-zinc-400'}`} />
           </button>
           
           {isRoleFilterOpen && (
             <>
               <div className="fixed inset-0 z-[100]" onClick={() => setIsRoleFilterOpen(false)} />
-              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-white dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl animate-fade-in origin-top">
+              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 z-[101] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-lg animate-fade-in origin-top">
                 {[
                   { value: '', label: 'All Roles' },
                   { value: 'admin', label: 'Admin' },
@@ -419,10 +493,10 @@ export default function UsersManagementPage() {
                   <button
                     key={roleOption.value || 'all'}
                     onClick={() => { setRoleFilter(roleOption.value); setIsRoleFilterOpen(false); }}
-                    className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/10
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800
                       ${roleFilter === roleOption.value 
-                        ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 font-semibold' 
-                        : 'text-slate-700 dark:text-slate-300'}`}
+                        ? 'bg-zinc-50 text-zinc-900 dark:bg-zinc-800 dark:text-white font-semibold' 
+                        : 'text-zinc-700 dark:text-zinc-300'}`}
                   >
                     {roleOption.label}
                   </button>
@@ -434,19 +508,19 @@ export default function UsersManagementPage() {
 
         <button 
           onClick={openCreateModal}
-          className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-none dark:shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0 h-[46px]"
+          className="flex items-center justify-center bg-cyan-50 dark:bg-cyan-500/20 hover:bg-cyan-100 dark:hover:bg-cyan-500/30 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all  shrink-0 h-[46px]"
         >
-          <Plus className="w-5 h-5 mr-2 shrink-0" />
+          <UserPlus className="w-5 h-5 mr-2 shrink-0" />
           {t('addNewUser') || 'Add New User'}
         </button>
       </div>
 
       {/* ── DATA TABLE ── */}
-      <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-none dark:shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px]  overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-300 font-semibold bg-slate-100/50 dark:bg-black/20">
+              <tr className="border-b border-zinc-200 dark:border-white/10 text-xs text-zinc-700 dark:text-zinc-300 font-semibold bg-zinc-100/50 dark:bg-black/20">
                 <th className="px-6 py-5">{t('accountEmail') || 'Account Email'}</th>
                 <th className="px-6 py-5">{t('systemRole') || 'System Role'}</th>
                 {userRole === 'superadmin' && <th className="px-6 py-5">{t('parentAdmin') || 'Parent Admin'}</th>}
@@ -454,26 +528,26 @@ export default function UsersManagementPage() {
                 <th className="px-6 py-5 text-right">{t('actions') || 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse bg-white/5 border-b border-slate-100 dark:border-white/5 last:border-0">
-                    <td className="px-6 py-5 flex items-center"><div className="h-4 w-4 bg-slate-200 dark:bg-white/10 rounded-full mr-3 shrink-0"></div><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-48"></div></td>
-                    <td className="px-6 py-5"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-24"></div></td>
-                    {userRole === 'superadmin' && <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>}
-                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24"></div></td>
-                    <td className="px-6 py-5 text-right"><div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
+                  <tr key={i} className="animate-pulse bg-white/5 border-b border-zinc-100 dark:border-white/5 last:border-0">
+                    <td className="px-6 py-5 flex items-center"><div className="h-4 w-4 bg-zinc-200 dark:bg-white/10 rounded-full mr-3 shrink-0"></div><div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-48"></div></td>
+                    <td className="px-6 py-5"><div className="h-6 bg-zinc-200 dark:bg-white/10 rounded-full w-24"></div></td>
+                    {userRole === 'superadmin' && <td className="px-6 py-5"><div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-24"></div></td>}
+                    <td className="px-6 py-5"><div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-24"></div></td>
+                    <td className="px-6 py-5 text-right"><div className="h-6 bg-zinc-200 dark:bg-white/10 rounded w-16 ml-auto"></div></td>
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === 'superadmin' ? 5 : 4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={userRole === 'superadmin' ? 5 : 4} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
                     {searchQuery ? (t('noUsersFoundSearch') || 'No users found matching your search.') : (t('noUsersFound') || 'No users found.')}
                   </td>
                 </tr>
               ) : filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-5 font-medium text-slate-900 dark:text-white flex items-center drop-shadow-sm">
+                <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-5 font-medium text-zinc-900 dark:text-white flex items-center drop-">
                     <UserCog className="w-4 h-4 mr-3 text-cyan-700 dark:text-cyan-400" />
                     {u.email}
                   </td>
@@ -485,30 +559,30 @@ export default function UsersManagementPage() {
                     </span>
                   </td>
                   {userRole === 'superadmin' && (
-                    <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 font-mono">
+                    <td className="px-6 py-5 text-sm text-zinc-600 dark:text-zinc-300 font-mono">
                       {u.parent_admin_email || '-'}
                     </td>
                   )}
-                  <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300 drop-shadow-sm">
+                  <td className="px-6 py-5 text-sm text-zinc-600 dark:text-zinc-300 drop-">
                     {new Date(u.created_at).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end space-x-3">
                       <button 
                         onClick={() => openMapPreview(u)}
-                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
+                        className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
                         <Map className="w-4 h-4 mr-1.5" /> {t('preview') || 'Preview'}
                       </button>
                       <button 
                         onClick={() => openEditModal(u)}
-                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
+                        className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
                       >
                         <Edit className="w-4 h-4 mr-1.5" /> {t('edit') || 'Edit'}
                       </button>
                       <button 
                         onClick={() => openDeleteModal(u)}
-                        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
+                        className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
                       >
                         <Trash2 className="w-4 h-4 mr-1.5" /> {t('delete') || 'Delete'}
                       </button>

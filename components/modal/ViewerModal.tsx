@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { X, MapPin, Tag, FileText } from 'lucide-react';
 import { useDashboardStore } from '@/store/useDashboardStore';
+import Modal from '@/components/ui/Modal';
 
 /**
  * Lazy-load the Leaflet map sub-component with `ssr: false`
@@ -50,88 +51,65 @@ export default function ViewerModal() {
   const { coordinates, properties } = selectedFeature;
 
   return (
-    // ── Backdrop ────────────────────────────────────────────────────
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeModal();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Viewer: ${properties.locationName}`}
+    <Modal
+      isOpen={isModalOpen}
+      onClose={closeModal}
+      title={
+        <div className="flex flex-col text-left">
+          <span className="text-base font-semibold text-zinc-900 dark:text-white">
+            {properties.locationName}
+          </span>
+          <span className="text-[11px] text-zinc-500 font-mono mt-0.5">
+            {coordinates[1].toFixed(4)}°, {coordinates[0].toFixed(4)}°
+          </span>
+        </div>
+      }
+      icon={<MapPin className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />}
+      maxWidth="max-w-lg"
+      noPadding={true}
     >
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="flex flex-col bg-white dark:bg-zinc-900 h-full">
+        {/* Leaflet 2D Micro-Map */}
+        <div className="h-52 w-full border-b border-zinc-200 dark:border-white/10 shrink-0">
+          <LeafletMiniMap
+            center={[coordinates[1], coordinates[0]]}
+            zoom={13}
+          />
+        </div>
 
-      {/* ── Modal Card ──────────────────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-lg animate-fade-in">
-        <div className="glass-card overflow-hidden shadow-2xl shadow-black/50">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-cyan/15">
-                <MapPin className="h-5 w-5 text-accent-cyan" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-text-primary">
-                  {properties.locationName}
-                </h2>
-                <p className="text-[11px] text-text-muted font-mono">
-                  {coordinates[1].toFixed(4)}°, {coordinates[0].toFixed(4)}°
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={closeModal}
-              className="glass-button flex h-8 w-8 items-center justify-center rounded-lg"
-              aria-label="Close modal"
-            >
-              <X className="h-4 w-4 text-text-secondary" />
-            </button>
-          </div>
-
-          {/* Leaflet 2D Micro-Map */}
-          <div className="h-52 w-full border-b border-white/8">
-            <LeafletMiniMap
-              center={[coordinates[1], coordinates[0]]}
-              zoom={13}
-            />
-          </div>
-
-          {/* Metadata */}
-          <div className="space-y-3 px-6 py-5">
-            <div className="flex items-start gap-3">
-              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />
-              <div>
-                <p className="text-xs font-medium text-text-secondary mb-0.5">
-                  Description
-                </p>
-                <p className="text-sm text-text-primary leading-relaxed">
-                  {properties.section || '-'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Tag className="h-4 w-4 shrink-0 text-text-muted" />
-              <div>
-                <p className="text-xs font-medium text-text-secondary mb-0.5">
-                  Category
-                </p>
-                <span className="inline-flex items-center rounded-md bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan ring-1 ring-inset ring-accent-cyan/20">
-                  {properties.locationGroup}
-                </span>
-              </div>
+        {/* Metadata */}
+        <div className="space-y-4 px-6 py-5">
+          <div className="flex items-start gap-3">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+            <div>
+              <p className="text-xs font-medium text-zinc-500 mb-0.5">
+                Description
+              </p>
+              <p className="text-sm text-zinc-900 dark:text-zinc-200 leading-relaxed">
+                {properties.section || '-'}
+              </p>
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="border-t border-white/8 px-6 py-3">
-            <p className="text-[10px] text-text-muted text-center">
-              Press <kbd className="rounded bg-white/8 px-1.5 py-0.5 text-text-secondary font-mono">Esc</kbd> to close
-            </p>
+          <div className="flex items-center gap-3">
+            <Tag className="h-4 w-4 shrink-0 text-zinc-400" />
+            <div>
+              <p className="text-xs font-medium text-zinc-500 mb-0.5">
+                Category
+              </p>
+              <span className="inline-flex items-center rounded-md bg-cyan-50 dark:bg-cyan-500/10 px-2.5 py-0.5 text-xs font-medium text-cyan-700 dark:text-cyan-400 ring-1 ring-inset ring-cyan-200 dark:ring-cyan-500/20">
+                {properties.locationGroup}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="border-t border-zinc-200 dark:border-white/10 px-6 py-4 mt-auto">
+          <p className="text-[10px] text-zinc-500 text-center">
+            Press <kbd className="rounded bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 text-zinc-600 dark:text-zinc-400 font-mono border border-zinc-200 dark:border-white/5">Esc</kbd> to close
+          </p>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

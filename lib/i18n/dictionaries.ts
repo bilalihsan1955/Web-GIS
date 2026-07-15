@@ -9,6 +9,10 @@ export const dictionaries = {
     cancel: 'Batal',
     delete: 'Hapus',
     confirm: 'Konfirmasi',
+    signOut: 'Keluar',
+    confirmSignOut: 'Konfirmasi Keluar',
+    signOutWarning: 'Apakah Anda yakin ingin keluar dari akun Anda? Anda harus masuk kembali untuk mengakses dasbor.',
+    confirmSignOutButton: 'Ya, Keluar',
     
     // Sidebar / Dashboard Shell
     systemOnline: 'Sistem Online',
@@ -54,6 +58,12 @@ export const dictionaries = {
     parentAdmin: 'Admin Induk',
     noUsersFoundSearch: 'Tidak ada pengguna yang cocok dengan pencarian Anda.',
     noUsersFound: 'Pengguna tidak ditemukan.',
+    globalUserManagement: 'Manajemen Pengguna Global',
+    selectCompanyToViewUsers: 'Pilih salah satu perusahaan di bawah ini untuk melihat pengguna/karyawannya.',
+    addNewCompanyAdmin: 'Tambah Perusahaan Baru (Admin)',
+    managingSpecificCompany: 'Anda sedang mengelola pengguna untuk satu perusahaan tertentu secara eksklusif.',
+    coAdminCompanyLevel: 'Co-Admin (Tingkat Perusahaan)',
+    adminNewCompany: 'Admin (Pemilik Perusahaan Baru)',
     
     // Map Preview
     shareGuestMap: 'Bagikan Peta Publik',
@@ -106,6 +116,8 @@ export const dictionaries = {
     // Company Grid
     directory: 'Direktori Perusahaan',
     noCompanies: 'Belum ada Perusahaan (Admin) yang terdaftar.',
+    searchCompany: 'Cari perusahaan atau email...',
+    companyNotFound: 'Perusahaan tidak ditemukan.',
     
     // Theme & Language
     switchTheme: 'Ganti Tema',
@@ -113,6 +125,12 @@ export const dictionaries = {
     dark: 'Gelap',
     light: 'Terang',
     edit: 'Edit',
+    
+    // Index Page & Common Actions
+    indexTitle: 'Data',
+    indexSubtitle: 'Platform cerdas untuk memetakan, mengelola, dan memvisualisasikan aset spasial perusahaan Anda dalam lingkungan 3D interaktif.',
+    startNow: 'Mulai Sekarang',
+    backToCompanies: 'Kembali ke Daftar Perusahaan',
   },
   en: {
     // Navigation / General
@@ -124,6 +142,10 @@ export const dictionaries = {
     cancel: 'Cancel',
     delete: 'Delete',
     confirm: 'Confirm',
+    signOut: 'Sign Out',
+    confirmSignOut: 'Confirm Sign Out',
+    signOutWarning: 'Are you sure you want to sign out of your account? You will need to log in again to access the dashboard.',
+    confirmSignOutButton: 'Yes, Sign Out',
     
     // Sidebar / Dashboard Shell
     systemOnline: 'System Online',
@@ -169,6 +191,12 @@ export const dictionaries = {
     parentAdmin: 'Parent Admin',
     noUsersFoundSearch: 'No users found matching your search.',
     noUsersFound: 'No users found.',
+    globalUserManagement: 'Global User Management',
+    selectCompanyToViewUsers: 'Select a company below to view its users/employees.',
+    addNewCompanyAdmin: 'Add New Company (Admin)',
+    managingSpecificCompany: 'You are exclusively managing users for a specific company.',
+    coAdminCompanyLevel: 'Co-Admin (Company Level)',
+    adminNewCompany: 'Admin (New Company Owner)',
     
     // Map Preview
     shareGuestMap: 'Share Guest Map',
@@ -221,6 +249,8 @@ export const dictionaries = {
     // Company Grid
     directory: 'Company Directory',
     noCompanies: 'No Companies (Admins) registered yet.',
+    searchCompany: 'Search company or email...',
+    companyNotFound: 'No companies found.',
     
     // Theme & Language
     switchTheme: 'Switch Theme',
@@ -228,6 +258,12 @@ export const dictionaries = {
     dark: 'Dark',
     light: 'Light',
     edit: 'Edit',
+    
+    // Index Page & Common Actions
+    indexTitle: 'Data',
+    indexSubtitle: 'Smart platform to map, manage, and visualize your company\'s spatial assets in an interactive 3D environment.',
+    startNow: 'Start Now',
+    backToCompanies: 'Back to Company List',
   }
 };
 

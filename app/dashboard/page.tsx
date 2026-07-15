@@ -52,14 +52,20 @@ export default function DashboardPage() {
   if (!isRoleLoaded) {
     return (
       <div className="flex flex-col gap-6 animate-pulse">
-        {/* Placeholder for header/stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-32 bg-slate-200 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-white/10"></div>
+        {/* Placeholder for unified metrics bar */}
+        <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800 bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800 h-[106px]">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex-1 p-6 flex items-center">
+              <div className="h-[58px] w-[58px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
+              <div className="ml-5 space-y-2 w-full">
+                <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800"></div>
+                <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800"></div>
+              </div>
+            </div>
           ))}
         </div>
         {/* Placeholder for table */}
-        <div className="h-96 bg-slate-200 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-white/10"></div>
+        <div className="h-96 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800"></div>
       </div>
     );
   }
@@ -81,29 +87,29 @@ export default function DashboardPage() {
   const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-8 animate-fade-in pb-12">
       
       {/* ── SUPERADMIN IMPERSONATION HEADER ── */}
       {userRole === 'superadmin' && selectedCompanyId !== 'all' && (
-        <div className="flex flex-col gap-3 mb-2">
+        <div className="flex flex-col gap-3 mb-4">
           <button 
             onClick={() => setSelectedCompanyId('all')}
-            className="group flex items-center text-sm font-medium text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-colors w-fit bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10"
+            className="group flex items-center text-xs font-bold tracking-wider text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white transition-colors w-fit border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090B] px-4 py-2"
           >
             <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
-            {t('back')}
+            {t('backToCompanies') || 'Back'}
           </button>
           
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0 overflow-hidden">
+          <div className="flex items-center gap-4 mt-2">
+            <div className="w-12 h-12 bg-zinc-950 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shrink-0 overflow-hidden">
               {activeCompany?.company_logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} className="w-full h-full object-cover" />
               ) : (
-                <Building2 className="w-5 h-5" />
+                <Building2 className="w-6 h-6" />
               )}
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tighter">
               {activeCompany?.company_name || 'Tanpa Nama'}
             </h2>
           </div>
@@ -122,11 +128,11 @@ export default function DashboardPage() {
       {/* ── SMART BATCH UPLOADER ── */}
       {(userRole === 'user' || userRole === 'admin' || userRole === 'superadmin') && (
         <section>
-          <div className="flex justify-between items-center mb-4 px-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md">{t('uploadPipeline')}</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-zinc-950 dark:text-white tracking-tight">{t('uploadPipeline')}</h2>
             <button 
               onClick={() => setIsManageSectionsModalOpen(true)}
-              className="flex items-center text-sm font-medium text-cyan-600 hover:text-cyan-700 bg-cyan-50 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 dark:text-cyan-400 dark:border dark:border-cyan-800 hover:bg-cyan-100 px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center text-xs font-bold tracking-wider text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-[12px]"
             >
               <Layers className="w-4 h-4 mr-1.5" />
               {t('manageSections')}

@@ -25,7 +25,7 @@ export function useDashboardData() {
   const [sectionFilter, setSectionFilter] = useState('');
 
   // Superadmin specific states
-  const [adminGroups, setAdminGroups] = useState<{user_id: string, company_name: string | null, email: string, company_logo: string | null}[]>([]);
+  const [adminGroups, setAdminGroups] = useState<{user_id: string, company_name: string | null, email: string, company_logo: string | null, company_slug: string | null}[]>([]);
   const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
   const setSelectedCompanyId = useDashboardStore((s) => s.setSelectedCompanyId);
 
@@ -58,7 +58,7 @@ export function useDashboardData() {
       if (currentUserRole === 'superadmin') {
         const { data: admins } = await supabase
           .from('user_roles')
-          .select('user_id, company_name, email, company_logo')
+          .select('user_id, company_name, email, company_logo, company_slug')
           .eq('role', 'admin') // strictly only Admins are considered Companies
           .is('parent_admin_id', null) // Only fetch true Company Owners, not Co-Admins
           .order('company_name', { ascending: true });
@@ -73,7 +73,26 @@ export function useDashboardData() {
       setIsRoleLoaded(true);
     }
 
-    const { data: spatialNodes } = await supabase
+    let targetAdminId = localUserGroupId;
+    if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
+      targetAdminId = selectedCompanyId;
+    }
+
+    let allowedCreatorIds: string[] | null = null;
+    // If not global superadmin, we must filter by targetAdminId
+    if (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all') {
+      const { data: companyUsers } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`);
+      if (companyUsers) {
+        allowedCreatorIds = companyUsers.map(u => u.user_id);
+      } else {
+        allowedCreatorIds = [targetAdminId]; // fallback
+      }
+    }
+
+    let nodesQuery = supabase
       .from('spatial_nodes')
       .select(`
         *,
@@ -89,8 +108,12 @@ export function useDashboardData() {
       `)
       .order('created_at', { ascending: false });
 
-    const { data: locs } = await supabase.from('locations').select('id, name').order('name');
-    
+    if (allowedCreatorIds) {
+      nodesQuery = nodesQuery.in('created_by', allowedCreatorIds);
+    }
+
+    const { data: spatialNodes } = await nodesQuery;
+
     // Default fallback to user_roles
     const { count: usersCount } = await supabase.from('user_roles').select('*', { count: 'exact', head: true });
     
@@ -99,7 +122,13 @@ export function useDashboardData() {
       const res = await fetch('/api/dashboard/users');
       const apiData = await res.json();
       if (apiData.users) {
-        setTotalUsers(apiData.users.length);
+        let filteredUsers = apiData.users;
+        if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
+          filteredUsers = apiData.users.filter((u: any) => 
+            u.parent_admin_id === selectedCompanyId || u.id === selectedCompanyId
+          );
+        }
+        setTotalUsers(filteredUsers.length);
       } else if (usersCount !== null) {
         setTotalUsers(usersCount);
       }
@@ -108,31 +137,11 @@ export function useDashboardData() {
     }
 
     if (spatialNodes) {
-      // Filter the nodes so that regular admins/users only see nodes from their group
-      const filteredByGroup = spatialNodes.filter((node: any) => {
-        // If the creator has a parent_admin_id (Co-Admin or User), that is the group. Otherwise, they are the owner.
-        // Supabase joins can sometimes return arrays or objects depending on the foreign key relationship cardinality detection.
-        const creatorData = Array.isArray(node.creator) ? node.creator[0] : node.creator;
-        const nodeCreatorGroupId = creatorData?.parent_admin_id || node.created_by;
-
-        if (currentUserRole === 'superadmin') {
-          // If superadmin has selected a specific company, filter by that company
-          if (selectedCompanyId !== 'all') {
-            return nodeCreatorGroupId === selectedCompanyId;
-          }
-          return true; // global view
-        }
-          
-        return nodeCreatorGroupId === localUserGroupId;
-      });
-
-      setNodes(filteredByGroup);
-      setTotalNodes(filteredByGroup.length);
-      const uniqueLocs = new Set(filteredByGroup.map((n: any) => n.location_id));
+      // Data is already filtered by Supabase
+      setNodes(spatialNodes);
+      setTotalNodes(spatialNodes.length);
+      const uniqueLocs = new Set(spatialNodes.map((n: any) => n.location_id));
       setTotalLocations(uniqueLocs.size);
-    }
-    if (locs) {
-      setLocations(locs);
     }
     setLoading(false);
   }, [supabase, selectedCompanyId]);

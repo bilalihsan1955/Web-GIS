@@ -10,6 +10,8 @@ type Section = {
   name: string;
 };
 
+import Modal from '@/components/ui/Modal';
+
 export default function ManageSectionsModal({ 
   isOpen, 
   onClose,
@@ -103,84 +105,56 @@ export default function ManageSectionsModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[99999] bg-slate-900/40 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up relative">
-        
-        {/* Header */}
-        <div className="bg-slate-50 dark:bg-black/20 px-6 py-5 border-b border-slate-200 dark:border-white/10 relative">
-          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-            {t('manageSections')}
-          </h2>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('manageSections')}
+      icon={<Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
+      maxWidth="max-w-sm"
+    >
+      <form onSubmit={handleAddSection} className="flex gap-2">
+        <input 
+          type="text" 
+          value={newSectionName} 
+          onChange={(e) => setNewSectionName(e.target.value)}
+          placeholder={t('sectionName')}
+          className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-sm text-zinc-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+          disabled={isSubmitting}
+        />
+        <button 
+          type="submit"
+          disabled={isSubmitting || !newSectionName.trim()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+        >
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+        </button>
+      </form>
 
-        {/* Body */}
-        <div className="p-6">
-          <form onSubmit={handleAddSection} className="flex gap-2">
-            <input 
-              type="text" 
-              value={newSectionName} 
-              onChange={(e) => setNewSectionName(e.target.value)}
-              placeholder={t('sectionName')}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-sm text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
-              disabled={isSubmitting}
-            />
-            <button 
-              type="submit"
-              disabled={isSubmitting || !newSectionName.trim()}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
-            >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            </button>
-          </form>
-
-          <div className="flex flex-col gap-2 mt-4 max-h-[250px] overflow-y-auto custom-scrollbar">
-            {loading ? (
-              <div className="flex justify-center p-4">
-                <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
-              </div>
-            ) : sections.length === 0 ? (
-              <div className="text-center p-4 text-sm text-slate-500 dark:text-slate-400">
-                {t('noSections')}
-              </div>
-            ) : (
-              sections.map(section => (
-                <div key={section.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{section.name}</span>
-                  <button 
-                    onClick={() => handleDeleteSection(section.id)}
-                    className="text-slate-400 hover:text-rose-500 transition-colors p-1"
-                    title={t('delete')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))
-            )}
+      <div className="flex flex-col gap-2 mt-4 max-h-[250px] overflow-y-auto custom-scrollbar">
+        {loading ? (
+          <div className="flex justify-center p-4">
+            <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
           </div>
-        </div>
+        ) : sections.length === 0 ? (
+          <div className="text-center p-4 text-sm text-zinc-500 dark:text-zinc-400">
+            {t('noSections')}
+          </div>
+        ) : (
+          sections.map(section => (
+            <div key={section.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+              <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{section.name}</span>
+              <button 
+                onClick={() => handleDeleteSection(section.id)}
+                className="text-zinc-400 hover:text-rose-500 transition-colors p-1"
+                title={t('delete')}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))
+        )}
       </div>
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255,255,255,0.2);
-        }
-      `}</style>
-    </div>
+    </Modal>
   );
 }
