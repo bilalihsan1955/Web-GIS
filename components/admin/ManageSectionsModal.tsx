@@ -41,7 +41,7 @@ export default function ManageSectionsModal({
       // it should automatically return sections belonging to the user's admin group.
       // If we are superadmin, we might need to filter by adminId if provided.
       let query = supabase.from('company_sections').select('*').order('created_at', { ascending: true });
-      if (adminId) {
+      if (adminId && adminId !== 'all') {
         query = query.eq('created_by', adminId);
       }
 
@@ -105,6 +105,27 @@ export default function ManageSectionsModal({
     }
   };
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  
+  const handleEditSection = async (id: string) => {
+    if (!editingName.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('company_sections')
+        .update({ name: editingName.trim() })
+        .eq('id', id);
+        
+      if (error) throw error;
+      setSections(sections.map(s => s.id === id ? { ...s, name: editingName.trim() } : s));
+      setEditingId(null);
+      setEditingName('');
+    } catch (err) {
+      console.error('Error updating section:', err);
+      alert('Gagal memperbarui sektor');
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -143,14 +164,53 @@ export default function ManageSectionsModal({
         ) : (
           sections.map(section => (
             <div key={section.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
-              <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{section.name}</span>
-              <button 
-                onClick={() => handleDeleteSection(section.id)}
-                className="text-zinc-400 hover:text-rose-500 transition-colors p-1"
-                title={t('delete')}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {editingId === section.id ? (
+                <div className="flex flex-1 gap-2 mr-2">
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    className="flex-1 px-2 py-1 rounded bg-white dark:bg-black/20 border border-zinc-300 dark:border-white/20 text-sm text-zinc-900 dark:text-white outline-none focus:border-cyan-500"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleEditSection(section.id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                  <button 
+                    onClick={() => handleEditSection(section.id)}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100 px-2 py-1 rounded"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              ) : (
+                <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200 truncate">{section.name}</span>
+              )}
+              
+              {editingId !== section.id && (
+                <div className="flex gap-1 shrink-0">
+                  <button 
+                    onClick={() => {
+                      setEditingId(section.id);
+                      setEditingName(section.name);
+                    }}
+                    className="text-zinc-400 hover:text-cyan-500 transition-colors p-1"
+                    title="Edit"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteSection(section.id)}
+                    className="text-zinc-400 hover:text-rose-500 transition-colors p-1"
+                    title={t('delete')}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}

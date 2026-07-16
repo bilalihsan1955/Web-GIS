@@ -145,7 +145,7 @@ export default function NodesTable({
                         <span className="text-sm font-semibold text-zinc-900 dark:text-white ">
                           {node.locations?.name || t('unnamed')}
                         </span>
-                        {node.locations?.description && (
+                        {(node.locations?.company_sections?.name || node.locations?.description) && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 w-fit">
                             {node.locations.company_sections?.name || node.locations.description}
                           </span>

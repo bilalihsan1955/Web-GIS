@@ -38,6 +38,8 @@ export default function MapSidebar({
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<{company_name?: string, company_description?: string, company_logo?: string} | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const userRoleFromStore = useDashboardStore((s) => s.userRole);
+  const userRole = userRoleFromStore || (typeof window !== 'undefined' ? localStorage.getItem('webgis_user_role') : null);
 
   // Edit Profile Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -304,7 +306,7 @@ export default function MapSidebar({
               </div>
             </div>
             
-            {isDashboard && (
+            {isDashboard && (userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
               <div className="flex flex-col items-start gap-1.5 w-full mt-1">
                 {showShareButton && (
                   <button
@@ -351,7 +353,7 @@ export default function MapSidebar({
           </div>
 
           {/* Mobile Action Buttons when drawer is expanded */}
-          {isDashboard && (
+          {isDashboard && (userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
             <div className="md:hidden flex flex-col gap-2 mb-4 w-full">
               {showShareButton && (
                 <button
@@ -563,6 +565,7 @@ export default function MapSidebar({
         <ManageSectionsModal 
           isOpen={isManageSectionsOpen}
           onClose={() => setIsManageSectionsOpen(false)}
+          adminId={adminId}
         />
       , document.body)}
 

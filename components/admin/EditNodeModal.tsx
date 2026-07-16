@@ -56,7 +56,7 @@ export default function EditNodeModal({
 
   const fetchSections = useCallback(async () => {
     let query = supabase.from('company_sections').select('id, name').order('created_at', { ascending: true });
-    if (adminId) {
+    if (adminId && adminId !== 'all') {
       query = query.eq('created_by', adminId);
     }
     const { data } = await query;

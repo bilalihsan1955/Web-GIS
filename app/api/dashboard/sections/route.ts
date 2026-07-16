@@ -93,3 +93,46 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id, name } = body;
+
+    if (!id || !name) {
+      return NextResponse.json({ error: 'ID and name are required' }, { status: 400 });
+    }
+
+    // Check permissions
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
+        return NextResponse.json({ error: 'Only admins can update sections' }, { status: 403 });
+    }
+
+    // Update section (RLS applies)
+    const { error } = await supabase
+      .from('company_sections')
+      .update({ name })
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

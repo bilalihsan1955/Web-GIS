@@ -5,7 +5,7 @@ import { createClient, createAdminClient } from '@/utils/supabase/server';
 const updateProfileSchema = z.object({
   company_name: z.string().min(1).max(255).optional(),
   company_description: z.string().max(1000).optional().nullable(),
-  company_logo: z.string().url().optional().nullable(),
+  company_logo: z.union([z.string().max(2048), z.literal(''), z.null()]).optional(),
 });
 
 export async function GET(req: Request) {
@@ -72,7 +72,7 @@ export async function PUT(req: Request) {
     let updateData: any = {
       company_name,
       company_description,
-      company_logo,
+      company_logo: company_logo === '' ? null : company_logo,
     };
     
     if (company_slug) {

@@ -34,7 +34,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
 
   const fetchSections = useCallback(async () => {
     let query = supabase.from('company_sections').select('id, name').order('created_at', { ascending: true });
-    if (assignToGroupId) {
+    if (assignToGroupId && assignToGroupId !== 'all') {
       query = query.eq('created_by', assignToGroupId);
     }
     const { data } = await query;
