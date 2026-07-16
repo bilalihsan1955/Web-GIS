@@ -20,6 +20,7 @@ export interface MapSidebarProps {
   shareUrl?: string;
   isShareLocked?: boolean;
   shareLockedMessage?: string;
+  onProfileUpdated?: (newSlug: string) => void;
 }
 
 export default function MapSidebar({ 
@@ -29,7 +30,8 @@ export default function MapSidebar({
   showShareButton,
   shareUrl,
   isShareLocked,
-  shareLockedMessage
+  shareLockedMessage,
+  onProfileUpdated
 }: MapSidebarProps = {}) {
   const params = useParams();
   const adminId = adminIdOverride || (params.adminId as string);
@@ -39,6 +41,8 @@ export default function MapSidebar({
   const [profile, setProfile] = useState<{company_name?: string, company_description?: string, company_logo?: string} | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const userRoleFromStore = useDashboardStore((s) => s.userRole);
+  const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
+  const currentUserGroupId = useDashboardStore((s) => s.currentUserGroupId);
   const userRole = userRoleFromStore || (typeof window !== 'undefined' ? localStorage.getItem('webgis_user_role') : null);
 
   // Edit Profile Modal State
@@ -131,13 +135,16 @@ export default function MapSidebar({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_name: compName, company_description: compDesc, company_logo: compIcon })
       });
+      const data = await res.json();
       if (res.ok) {
-        setProfile({ company_name: compName, company_description: compDesc, company_logo: compIcon });
+        setProfile({ ...profile, company_name: compName, company_description: compDesc, company_logo: compIcon, company_slug: data.slug } as any);
+        if (onProfileUpdated && data.slug) {
+          onProfileUpdated(data.slug);
+        }
         setIsEditModalOpen(false);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
       } else {
-        const data = await res.json();
         alert('Gagal menyimpan profil: ' + data.error);
       }
     } catch (err) {
@@ -565,7 +572,6 @@ export default function MapSidebar({
         <ManageSectionsModal 
           isOpen={isManageSectionsOpen}
           onClose={() => setIsManageSectionsOpen(false)}
-          adminId={adminId}
         />
       , document.body)}
 

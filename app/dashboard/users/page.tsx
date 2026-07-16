@@ -407,6 +407,13 @@ export default function UsersManagementPage() {
     return matchesSearch && matchesRole;
   });
 
+  // Prevent hydration mismatch by returning a neutral placeholder during SSR and initial hydration
+  if (!isMounted) {
+    return (
+      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center"></div>
+    );
+  }
+
   if (isSuperadminGlobal) {
     return (
       <div className="animate-fade-in pb-12 space-y-6">

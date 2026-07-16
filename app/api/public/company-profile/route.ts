@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
     if (uuidRegex.test(slug)) {
       const { data } = await adminSupabase
         .from('user_roles')
-        .select('company_name, company_description, company_logo, company_slug')
+        .select('user_id, company_name, company_description, company_logo, company_slug')
         .eq('user_id', slug)
         .single();
       
@@ -35,7 +37,7 @@ export async function GET(req: Request) {
       // Try as company_slug
       const { data } = await adminSupabase
         .from('user_roles')
-        .select('company_name, company_description, company_logo, company_slug')
+        .select('user_id, company_name, company_description, company_logo, company_slug')
         .eq('company_slug', slug)
         .single();
       profileData = data;

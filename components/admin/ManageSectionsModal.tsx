@@ -11,17 +11,22 @@ type Section = {
 };
 
 import Modal from '@/components/ui/Modal';
+import { useDashboardStore } from '@/store/useDashboardStore';
 
 export default function ManageSectionsModal({ 
   isOpen, 
-  onClose,
-  adminId
+  onClose
 }: { 
   isOpen: boolean; 
   onClose: () => void;
-  adminId?: string; // If passed, fetch sections for this admin. If not, use logged in user's group.
 }) {
   const { t } = useLanguage();
+  const userRole = useDashboardStore((s) => s.userRole);
+  const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
+  const currentUserGroupId = useDashboardStore((s) => s.currentUserGroupId);
+  
+  const adminId = userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId;
+
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [newSectionName, setNewSectionName] = useState('');
@@ -48,8 +53,10 @@ export default function ManageSectionsModal({
       const { data, error } = await query;
       if (error) throw error;
       setSections(data || []);
-    } catch (err) {
-      console.error('Error fetching sections:', err);
+    } catch (err: any) {
+      console.error('Error fetching sections:', err.message || JSON.stringify(err, null, 2), err);
+      // Let's also alert to the screen so the user can tell us what the error is
+      alert('Fetch Sections Error: ' + (err.message || JSON.stringify(err)));
     } finally {
       setLoading(false);
     }

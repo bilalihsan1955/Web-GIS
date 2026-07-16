@@ -14,7 +14,11 @@ export function useDashboardData() {
   // Get global role from store or safe post-mount cache to guarantee zero hydration mismatch
   const userRoleFromStore = useDashboardStore((s) => s.userRole);
   const setUserRole = useDashboardStore((s) => s.setUserRole);
+  const setCurrentUserGroupIdStore = useDashboardStore((s) => s.setCurrentUserGroupId);
+  
+  // Use state instead of synchronous init to avoid hydration mismatch
   const [cachedRole, setCachedRole] = useState<string | null>(null);
+  
   const userRole = userRoleFromStore || cachedRole || 'user';
   
   const [currentUserGroupId, setCurrentUserGroupId] = useState<string>('');
@@ -58,9 +62,11 @@ export function useDashboardData() {
         }
         localUserGroupId = roleData.parent_admin_id || user.id;
         setCurrentUserGroupId(localUserGroupId);
+        setCurrentUserGroupIdStore(localUserGroupId);
       } else {
         localUserGroupId = user.id;
         setCurrentUserGroupId(localUserGroupId);
+        setCurrentUserGroupIdStore(localUserGroupId);
       }
       setIsRoleLoaded(true);
     } else {

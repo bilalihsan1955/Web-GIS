@@ -30,6 +30,7 @@ interface DashboardState {
   // ── Session & Role ──────────────────────────────────────────────────
   userRole: string | null;
   selectedCompanyId: string;
+  currentUserGroupId: string | null;
 
   // ── Actions ─────────────────────────────────────────────────────────
   openModal: (feature: SelectedFeature) => void;
@@ -39,6 +40,7 @@ interface DashboardState {
   setIsSatellite: (val: boolean) => void;
   setUserRole: (role: string) => void;
   setSelectedCompanyId: (id: string) => void;
+  setCurrentUserGroupId: (id: string | null) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -50,6 +52,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isSatellite: true,
   userRole: null,
   selectedCompanyId: 'all',
+  currentUserGroupId: null,
 
   openModal: (feature) =>
     set({ isModalOpen: true, selectedFeature: feature }),
@@ -71,4 +74,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   setSelectedCompanyId: (id) =>
     set({ selectedCompanyId: id }),
+
+  setCurrentUserGroupId: (id) =>
+    set({ currentUserGroupId: id }),
 }));

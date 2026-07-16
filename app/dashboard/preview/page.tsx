@@ -36,7 +36,7 @@ export default function PreviewPage() {
 
   const [slug, setSlug] = useState('');
   const [hasValidCompany, setHasValidCompany] = useState(false);
-  const { userRole, adminGroups, selectedCompanyId, setSelectedCompanyId, loading: dashboardLoading, isRoleLoaded, isSuperadminGlobal } = useDashboardData();
+  const { userRole, adminGroups, selectedCompanyId, setSelectedCompanyId, loading: dashboardLoading, isRoleLoaded, isSuperadminGlobal, isMounted } = useDashboardData();
 
   const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
   const activeAdminId = (userRole === 'superadmin' && selectedCompanyId !== 'all') 
@@ -54,7 +54,7 @@ export default function PreviewPage() {
       }
 
       try {
-        const profileRes = await fetch('/api/dashboard/company-profile');
+        const profileRes = await fetch('/api/dashboard/company-profile', { cache: 'no-store' });
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           if (profileData.profile) {
@@ -82,6 +82,13 @@ export default function PreviewPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Prevent hydration mismatch by returning a neutral placeholder during SSR and initial hydration
+  if (!isMounted) {
+    return (
+      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center"></div>
+    );
+  }
 
   // If Superadmin is in Global Mode, show the Company Grid Directory or its skeleton right away
   if (isSuperadminGlobal) {
@@ -174,6 +181,7 @@ export default function PreviewPage() {
         shareUrl={typeof window !== 'undefined' && activeAdminId ? `${window.location.origin}/${activeAdminId}` : ''}
         isShareLocked={!isValidToShare}
         shareLockedMessage={t('lockedMsg')}
+        onProfileUpdated={(newSlug) => setSlug(newSlug)}
       />
 
       {/* 360-Degree Panorama Viewer (opens on unclustered point click) */}

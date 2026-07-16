@@ -1,106 +1,50 @@
-'use client';
+import { createAdminClient } from '@/utils/supabase/server';
+import ClientAdminPage from './ClientAdminPage';
 
-import { useEffect, useRef, useState } from 'react';
-import { useTheme } from 'next-themes';
-import dynamic from 'next/dynamic';
-import MapLoadingFallback from '@/components/ui/MapLoadingFallback';
-import DashboardShell from '@/components/ui/DashboardShell';
-import ViewerModal from '@/components/modal/ViewerModal';
+export const dynamic = 'force-dynamic';
 
-import { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-
-// ── Strict Lazy Loading for 360 Viewer ──────────────────────────────
-const Viewer360 = dynamic(() => import('@/components/Viewer360'), {
-  ssr: false, // Prevents server-side rendering of heavy WebGL/PSV libraries
-});
-
-const MapboxGlobe = dynamic(
-  () => import('@/components/map/MapboxGlobe'),
-  {
-    ssr: false,
-    loading: () => <MapLoadingFallback />,
-  },
-);
-
-function MapContent({ adminId }: { adminId: string }) {
-  return (
-    <>
-      {/* Layer 1: Map Canvas */}
-      <MapboxGlobe adminId={adminId} />
-
-      {/* Layer 2: Glass Overlay Shell */}
-      <DashboardShell />
-
-      {/* Layer 3: Old text modal (if still used) */}
-      <ViewerModal />
-
-      {/* Layer 4: 360-Degree Panorama Viewer (opens on unclustered point click) */}
-      <Viewer360 />
-    </>
-  );
-}
-
-export default function AdminPage() {
-  const params = useParams();
-  const adminId = params.adminId as string;
-  const { theme, setTheme } = useTheme();
-  const originalTheme = useRef<string | undefined>(undefined);
-  const [isValidating, setIsValidating] = useState(true);
-  const [errorState, setErrorState] = useState<{ type: '404' | '403', message: string } | null>(null);
-
-  useEffect(() => {
-    if (originalTheme.current === undefined) {
-      originalTheme.current = theme;
-    }
-    
-    if (theme !== 'dark') {
-      setTheme('dark');
-    }
-
-    return () => {
-      if (originalTheme.current === 'light') {
-        setTheme('light');
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    async function validateSlug() {
-      try {
-        const res = await fetch(`/api/public/company-profile?slug=${adminId}`);
-        if (!res.ok) {
-          if (res.status === 403) {
-            setErrorState({
-              type: '403',
-              message: 'Halaman ini harus diakses menggunakan URL Tautan Khusus (Slug) perusahaan Anda, bukan menggunakan ID bawaan.'
-            });
-          } else {
-            setErrorState({
-              type: '404',
-              message: 'Tautan mungkin salah atau perusahaan belum terdaftar.'
-            });
-          }
+export default async function AdminPage({ params }: { params: { adminId: string } }) {
+  // Use Promise.resolve for params compatibility between Next 14 and Next 15
+  const resolvedParams = await Promise.resolve(params);
+  const adminId = resolvedParams.adminId;
+  const adminSupabase = createAdminClient();
+  
+  let is403 = false;
+  let is404 = false;
+  
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  
+  try {
+    if (uuidRegex.test(adminId)) {
+      const { data } = await adminSupabase
+        .from('user_roles')
+        .select('user_id, company_slug')
+        .eq('user_id', adminId)
+        .single();
+        
+      if (data) {
+        if (data.company_slug) {
+          is403 = true;
         }
-      } catch (err) {
-        setErrorState({
-          type: '404',
-          message: 'Terjadi kesalahan saat memvalidasi halaman.'
-        });
-      } finally {
-        setIsValidating(false);
+      } else {
+        is404 = true;
+      }
+    } else {
+      const { data } = await adminSupabase
+        .from('user_roles')
+        .select('company_slug')
+        .eq('company_slug', adminId)
+        .single();
+        
+      if (!data) {
+        is404 = true;
       }
     }
-    validateSlug();
-  }, [adminId]);
-
-  if (isValidating) {
-    return <MapLoadingFallback />;
+  } catch (err) {
+    is404 = true;
   }
 
-  if (errorState) {
-    const is404 = errorState.type === '404';
+  if (is404 || is403) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-center px-4">
         {is404 ? (
@@ -119,14 +63,12 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold text-white mb-3 tracking-tight">
           {is404 ? 'Halaman Tidak Ditemukan' : 'Akses Ditolak'}
         </h1>
-        <p className="text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">{errorState.message}</p>
+        <p className="text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
+          {is404 ? 'Tautan mungkin salah atau perusahaan belum terdaftar.' : 'Halaman ini harus diakses menggunakan URL Tautan Khusus (Slug) perusahaan Anda, bukan menggunakan ID bawaan.'}
+        </p>
       </div>
     );
   }
 
-  return (
-    <Suspense fallback={<MapLoadingFallback />}>
-      <MapContent adminId={adminId} />
-    </Suspense>
-  );
+  return <ClientAdminPage adminId={adminId} />;
 }

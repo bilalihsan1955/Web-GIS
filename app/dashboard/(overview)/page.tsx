@@ -50,6 +50,13 @@ export default function DashboardPage() {
     setTotalNodes
   });
 
+  // Prevent hydration mismatch by returning a neutral placeholder during SSR and initial hydration
+  if (!isMounted) {
+    return (
+      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center"></div>
+    );
+  }
+
   if (!isRoleLoaded) {
     if (isSuperadminGlobal) {
       return (
@@ -189,7 +196,6 @@ export default function DashboardPage() {
       <ManageSectionsModal
         isOpen={isManageSectionsModalOpen}
         onClose={() => setIsManageSectionsModalOpen(false)}
-        adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
       />
       <EditNodeModal 
         adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
