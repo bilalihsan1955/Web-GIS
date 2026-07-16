@@ -313,7 +313,7 @@ export default function MapSidebar({
               </div>
             </div>
             
-            {isDashboard && (userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
+            {isDashboard && (
               <div className="flex flex-col items-start gap-1.5 w-full mt-1">
                 {showShareButton && (
                   <button
@@ -341,13 +341,15 @@ export default function MapSidebar({
                     )}
                   </button>
                 )}
-                <button 
-                  onClick={handleOpenEdit} 
-                  className="flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shadow-sm" 
-                >
-                  <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{t('editProfile')}</span>
-                </button>
+                {(userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
+                  <button 
+                    onClick={handleOpenEdit} 
+                    className="flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-all shadow-sm" 
+                  >
+                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{t('editProfile')}</span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsManageSectionsOpen(true)} 
                   className="flex items-center justify-center w-full gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 transition-all shadow-sm" 
@@ -360,7 +362,7 @@ export default function MapSidebar({
           </div>
 
           {/* Mobile Action Buttons when drawer is expanded */}
-          {isDashboard && (userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
+          {isDashboard && (
             <div className="md:hidden flex flex-col gap-2 mb-4 w-full">
               {showShareButton && (
                 <button
@@ -389,13 +391,15 @@ export default function MapSidebar({
                 </button>
               )}
               <div className="flex flex-col sm:flex-row gap-2.5 w-full">
-                <button 
-                  onClick={handleOpenEdit} 
-                  className="flex items-center justify-center flex-1 gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-cyan-400 min-h-[44px] shadow-sm transition-all active:scale-95" 
-                >
-                  <Edit3 className="w-4 h-4 text-cyan-500 shrink-0" />
-                  {t('editProfile')}
-                </button>
+                {(userRole === 'admin' || (userRole === 'superadmin' && adminId !== 'all')) && (
+                  <button 
+                    onClick={handleOpenEdit} 
+                    className="flex items-center justify-center flex-1 gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-cyan-400 min-h-[44px] shadow-sm transition-all active:scale-95" 
+                  >
+                    <Edit3 className="w-4 h-4 text-cyan-500 shrink-0" />
+                    {t('editProfile')}
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsManageSectionsOpen(true)} 
                   className="flex items-center justify-center flex-1 gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-500/30 min-h-[44px] shadow-sm transition-all active:scale-95" 

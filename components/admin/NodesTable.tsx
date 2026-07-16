@@ -184,9 +184,8 @@ export default function NodesTable({
                     <td className="px-6 py-5 text-right">
                       <div className="flex items-center justify-end space-x-2 transition-opacity">
                         {(() => {
-                          const nodeCreatorGroupId = node.creator?.role === 'admin' 
-                            ? node.created_by 
-                            : (node.creator?.parent_admin_id || node.created_by);
+                          const creatorData = Array.isArray(node.creator) ? node.creator[0] : node.creator;
+                          const nodeCreatorGroupId = creatorData?.parent_admin_id || node.created_by;
                           const isSameGroup = nodeCreatorGroupId === currentUserGroupId;
                           
                           return (userRole === 'superadmin' || isSameGroup) && (

@@ -23,6 +23,7 @@ export default function UsersManagementPage() {
   const { t, language } = useLanguage();
   const supabase = createClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isCoAdmin, setIsCoAdmin] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('user');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ export default function UsersManagementPage() {
       return;
     }
 
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+    const { data: roleData } = await supabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
     if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       setIsAdmin(false);
       setLoading(false);
@@ -78,6 +79,7 @@ export default function UsersManagementPage() {
 
     setIsAdmin(true);
     setUserRole(roleData.role);
+    setIsCoAdmin(roleData.role === 'admin' && roleData.parent_admin_id !== null);
 
     if (roleData.role === 'superadmin') {
       const { data: admins } = await supabase
@@ -590,18 +592,24 @@ export default function UsersManagementPage() {
                       >
                         <Map className="w-4 h-4 mr-1.5" /> {t('preview') || 'Preview'}
                       </button>
-                      <button 
-                        onClick={() => openEditModal(u)}
-                        className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
-                      >
-                        <Edit className="w-4 h-4 mr-1.5" /> {t('edit') || 'Edit'}
-                      </button>
-                      <button 
-                        onClick={() => openDeleteModal(u)}
-                        className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1.5" /> {t('delete') || 'Delete'}
-                      </button>
+                      {!(isCoAdmin && (u.role === 'admin' && !u.parent_admin_id)) && effectiveRole !== 'user' && (
+                        <>
+                          <button 
+                            onClick={() => openEditModal(u)}
+                            className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-white/10 transition-all font-medium text-sm flex items-center"
+                          >
+                            <Edit className="w-4 h-4 mr-1.5" /> {t('edit') || 'Edit'}
+                          </button>
+                          {!(u.role === 'admin' && !u.parent_admin_id) && (
+                            <button 
+                              onClick={() => openDeleteModal(u)}
+                              className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1.5" /> {t('delete') || 'Delete'}
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
