@@ -52,6 +52,8 @@ export default function MapSidebar({
   const [compDesc, setCompDesc] = useState('');
   const [compIcon, setCompIcon] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [copied, setCopied] = useState(false);
   const isDashboard = forceDashboard !== undefined ? forceDashboard : !adminId;
   const { t } = useLanguage();
@@ -130,10 +132,14 @@ export default function MapSidebar({
 
   const handleSaveProfile = async () => {
     try {
+      const payload: any = { company_name: compName, company_description: compDesc, company_logo: compIcon };
+      if (userRole === 'superadmin' && selectedCompanyId && selectedCompanyId !== 'all') {
+        payload.target_admin_id = selectedCompanyId;
+      }
       const res = await fetch('/api/dashboard/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company_name: compName, company_description: compDesc, company_logo: compIcon })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (res.ok) {
@@ -142,13 +148,21 @@ export default function MapSidebar({
           onProfileUpdated(data.slug);
         }
         setIsEditModalOpen(false);
+        setToastType('success');
+        setToastMessage('Profil berhasil disimpan');
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
       } else {
-        alert('Gagal menyimpan profil: ' + data.error);
+        setToastType('error');
+        setToastMessage(data.error || 'Gagal menyimpan profil');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
       }
     } catch (err) {
-      alert('Gagal menyimpan profil.');
+      setToastType('error');
+      setToastMessage('Gagal menyimpan profil');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     }
   };
 
@@ -579,11 +593,11 @@ export default function MapSidebar({
         />
       , document.body)}
 
-      {/* Floating Success Toast using Portal */}
+      {/* Floating Toast using Portal */}
       {showToast && mounted && document.body && createPortal(
-        <div className="fixed bottom-6 right-6 z-[100000] animate-slide-up flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/30 pointer-events-auto">
-          <Check className="w-4 h-4" />
-          Profil berhasil diperbarui!
+        <div className={`fixed bottom-6 right-6 z-[100000] animate-slide-up flex items-center gap-2 px-5 py-3.5 rounded-2xl text-white font-bold text-xs shadow-2xl border pointer-events-auto ${toastType === 'success' ? 'bg-emerald-500 border-emerald-400/30' : 'bg-rose-500 border-rose-400/30'}`}>
+          {toastType === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+          {toastMessage || 'Profil berhasil diperbarui!'}
         </div>
       , document.body)}
 

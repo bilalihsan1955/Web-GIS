@@ -50,15 +50,21 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Only administrators can modify the company profile.' }, { status: 403 });
     }
 
-    // Target the Owner's user_id if this is a Co-Admin or User
-    const targetUserId = roleData.parent_admin_id || user.id;
-
     const body = await req.json();
-    const parsed = updateProfileSchema.safeParse(body);
+    const extendedSchema = updateProfileSchema.extend({
+      target_admin_id: z.string().optional()
+    });
+    const parsed = extendedSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid request data', details: parsed.error.format() }, { status: 400 });
     }
-    const { company_name, company_description, company_logo } = parsed.data;
+    const { company_name, company_description, company_logo, target_admin_id } = parsed.data;
+
+    // Target the Owner's user_id if this is a Co-Admin or User
+    let targetUserId = roleData.parent_admin_id || user.id;
+    if (roleData.role === 'superadmin' && target_admin_id) {
+      targetUserId = target_admin_id;
+    }
 
     let company_slug = undefined;
     if (company_name) {

@@ -114,8 +114,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* LOGO AREA */}
       <div className={`h-16 flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-6'} border-b border-zinc-200 dark:border-zinc-800 shrink-0 transition-all duration-300`}>
         <div className={`flex items-center min-w-0 ${isCollapsed ? 'justify-center w-full' : 'pr-2'}`}>
-          {isLoadingProfile ? (
+          {isLoadingProfile || isLoadingRole ? (
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg`}></div>
+          ) : role === 'superadmin' ? (
+            <div className={`bg-zinc-950 dark:bg-white ${isCollapsed ? '' : 'mr-3'} shrink-0 w-8 h-8 flex items-center justify-center rounded-lg`} title="Geo Admin">
+              <Compass className="w-5 h-5 text-white dark:text-zinc-950" />
+            </div>
           ) : companyProfile?.company_logo ? (
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg`} title={companyProfile.company_name || 'WebGIS Platform'}>
               <Image src={companyProfile.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
@@ -127,11 +131,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
           
           {!isCollapsed && (
-            isLoadingProfile ? (
+            isLoadingProfile || isLoadingRole ? (
               <div className="h-5 w-28 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-md"></div>
             ) : (
               <span className="font-bold text-zinc-950 dark:text-white text-base tracking-tight truncate">
-                {companyProfile?.company_name || 'WebGIS Platform'}
+                {role === 'superadmin' ? 'Geo Admin' : (companyProfile?.company_name || 'WebGIS Platform')}
               </span>
             )
           )}
