@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, ChevronDown, Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, ChevronDown, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface NodesTableProps {
@@ -33,6 +33,15 @@ export default function NodesTable({
 }: NodesTableProps) {
   const { t } = useLanguage();
   const [isSectionFilterOpen, setIsSectionFilterOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sectionFilter, itemsPerPage]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredNodes.length / itemsPerPage));
+  const paginatedNodes = filteredNodes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <section>
@@ -124,7 +133,7 @@ export default function NodesTable({
                   </td>
                 </tr>
               ) : (
-                filteredNodes.map((node) => (
+                paginatedNodes.map((node) => (
                   <tr key={node.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-5">
                       <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-black/40 overflow-hidden relative border border-zinc-200 dark:border-white/10 ">
@@ -213,6 +222,74 @@ export default function NodesTable({
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredNodes.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredNodes.length)} dari {filteredNodes.length} data
+              </span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-cyan-500"
+              >
+                <option value={10}>10 / halaman</option>
+                <option value={25}>25 / halaman</option>
+                <option value={50}>50 / halaman</option>
+                <option value={100}>100 / halaman</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center space-x-1">
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  // Show current, first, last, and pages adjacent to current
+                  if (
+                    page === 1 || 
+                    page === totalPages || 
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors border ${
+                          currentPage === page 
+                            ? 'bg-cyan-500 text-white border-cyan-500' 
+                            : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (
+                    page === currentPage - 2 ||
+                    page === currentPage + 2
+                  ) {
+                    return <span key={page} className="text-zinc-400 dark:text-zinc-600 px-1">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

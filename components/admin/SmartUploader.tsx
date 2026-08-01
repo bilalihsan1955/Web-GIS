@@ -57,6 +57,15 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
   const [locationName, setLocationName] = useState('');
   const [locationSectionId, setLocationSectionId] = useState('');
   const [editCaptureDate, setEditCaptureDate] = useState('');
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   // Automatically pop the Details modal if a file is waiting and no modal is currently open
   useEffect(() => {
@@ -105,6 +114,21 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         throw new Error('Upload rejected: No GPS metadata found in image.');
       }
 
+      // Check if node already exists with same coordinates (using tolerance for floating point)
+      const tolerance = 0.00001; // roughly 1 meter accuracy
+      const { data: existingNodes } = await supabase
+        .from('spatial_nodes')
+        .select('id')
+        .gte('latitude', exifData.latitude - tolerance)
+        .lte('latitude', exifData.latitude + tolerance)
+        .gte('longitude', exifData.longitude - tolerance)
+        .lte('longitude', exifData.longitude + tolerance)
+        .limit(1);
+
+      if (existingNodes && existingNodes.length > 0) {
+        throw new Error('Upload ditolak: Titik panorama dengan koordinat GPS ini sudah ada di dalam sistem.');
+      }
+
       let captureDate = null;
       if (exifData.DateTimeOriginal) {
         const dateObj = new Date(exifData.DateTimeOriginal);
@@ -147,6 +171,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
       
     } catch (error: any) {
       updateProgress({ status: 'error', errorMsg: error.message || 'Unknown error occurred.' });
+      showToast(error.message || 'Unknown error occurred.', 'error');
     }
   };
 
@@ -278,6 +303,11 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     if (files.length === 0) return;
 
+    if (files.length > 50) {
+      showToast(t('maxUploadLimit'), 'error');
+      return;
+    }
+
     const newFilesProgress: FileProgress[] = files.map(file => ({
       id: Math.random().toString(36).substring(7),
       file, progress: 0, status: 'pending'
@@ -293,6 +323,12 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
       const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
       if (files.length === 0) {
         e.target.value = ''; // Reset input even if no valid files
+        return;
+      }
+
+      if (files.length > 50) {
+        showToast(t('maxUploadLimit'), 'error');
+        e.target.value = '';
         return;
       }
 
@@ -315,7 +351,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
   const modalContent = activeDetailsFileId && activeFileDetails && isMounted ? (
     <Modal
       isOpen={!!activeDetailsFileId}
-      onClose={handleCancel}
+      onClose={() => setIsCancelConfirmOpen(true)}
       title="Finalize Image Details"
       icon={<Edit className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
       maxWidth="max-w-lg"
@@ -416,7 +452,7 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
 
         <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3 mt-2">
           <button 
-            onClick={handleCancel} 
+            onClick={() => setIsCancelConfirmOpen(true)} 
             className="w-full sm:w-auto px-5 py-3 sm:py-2.5 min-h-[44px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
           >
             {t('cancel')}
@@ -545,6 +581,48 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
 
       {/* Render Modal into Portal */}
       {isMounted && document.body && createPortal(modalContent, document.body)}
+      {isMounted && document.body && createPortal(
+        <Modal
+          isOpen={isCancelConfirmOpen}
+          onClose={() => setIsCancelConfirmOpen(false)}
+          title={t('cancelUploadConfirm')}
+          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+          maxWidth="max-w-sm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {t('cancelUploadMessage')}
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIsCancelConfirmOpen(false)}
+                className="w-full sm:w-auto px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                {t('cancelUploadNo')}
+              </button>
+              <button
+                onClick={() => {
+                  setIsCancelConfirmOpen(false);
+                  handleCancel();
+                }}
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
+              >
+                {t('cancelUploadYes')}
+              </button>
+            </div>
+          </div>
+        </Modal>,
+        document.body
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && isMounted && document.body && createPortal(
+        <div className={`fixed bottom-6 right-6 z-[100000] animate-slide-up flex items-center gap-2 px-5 py-3.5 rounded-2xl text-white font-bold text-xs shadow-2xl border pointer-events-auto ${toastType === 'success' ? 'bg-emerald-500 border-emerald-400/30' : 'bg-rose-500 border-rose-400/30'}`}>
+          {toastType === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
+          {toastMessage}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

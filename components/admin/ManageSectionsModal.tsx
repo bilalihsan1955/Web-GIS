@@ -161,8 +161,16 @@ export default function ManageSectionsModal({
 
       <div className="flex flex-col gap-2 mt-4 max-h-[250px] overflow-y-auto custom-scrollbar">
         {loading ? (
-          <div className="flex justify-center p-4">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
+          <div className="flex flex-col gap-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 animate-pulse">
+                <div className="h-4 bg-zinc-200 dark:bg-white/10 rounded w-1/3"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 w-6 bg-zinc-200 dark:bg-white/10 rounded"></div>
+                  <div className="h-6 w-6 bg-zinc-200 dark:bg-white/10 rounded"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : sections.length === 0 ? (
           <div className="text-center p-4 text-sm text-zinc-500 dark:text-zinc-400">

@@ -98,6 +98,11 @@ export const dictionaries = {
     deleteWarning: 'Apakah Anda yakin ingin menghapus permanen panorama ini? Tindakan ini akan menghapus file dari penyimpanan dan database serta tidak dapat dibatalkan.',
     
     // Smart Uploader
+    maxUploadLimit: 'Batas unggahan maksimal adalah 50 foto sekaligus.',
+    cancelUploadConfirm: 'Batalkan Pengunggahan?',
+    cancelUploadMessage: 'Apakah Anda yakin ingin berhenti dan membatalkan proses ini? Foto yang baru saja Anda unggah akan dihapus sepenuhnya dari sistem.',
+    cancelUploadNo: 'Tidak, Kembali Mengisi',
+    cancelUploadYes: 'Ya, Batalkan Saja',
     uploadPipeline: 'Alur Upload',
     uploadNewNode: 'Upload Titik Baru',
     selectImage: 'Pilih Gambar (360° Opsional)',
@@ -233,6 +238,11 @@ export const dictionaries = {
     deleteWarning: 'Are you sure you want to permanently delete this panorama? This action will remove the file from storage and the database and cannot be undone.',
     
     // Smart Uploader
+    maxUploadLimit: 'Maximum upload is 50 photos at a time.',
+    cancelUploadConfirm: 'Cancel Upload?',
+    cancelUploadMessage: 'Are you sure you want to cancel and stop this process? The photo you just uploaded will be completely removed from the system.',
+    cancelUploadNo: 'No, Continue Filling',
+    cancelUploadYes: 'Yes, Cancel It',
     uploadPipeline: 'Upload Pipeline',
     uploadNewNode: 'Upload New Node',
     selectImage: 'Select Image (360° Optional)',
