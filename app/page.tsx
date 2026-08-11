@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, MapPin, Layers, Globe2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function RootLandingPage() {
   return (

@@ -28,7 +28,8 @@ import {
  *
  * Returns a ref to attach to the container `<div>`.
  */
-export function useMapbox() {
+export function useMapbox(options?: { shouldAnimate?: boolean }) {
+  const shouldAnimate = options?.shouldAnimate ?? true;
   const searchParams = useSearchParams();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -272,8 +273,8 @@ export function useMapbox() {
         });
       }
 
-      // ── Initial Cinematic Entry Animation (Bulletproof Deep Zoom) ──
-      if (!hasAnimatedRef.current && geoJSON.features.length > 0) {
+      // ── Initial Cinematic Entry Animation (Triggered when shouldAnimate is true) ──
+      if (!hasAnimatedRef.current && geoJSON.features.length > 0 && shouldAnimate) {
         hasAnimatedRef.current = true;
         
         // Check for URL query coordinates
@@ -314,7 +315,7 @@ export function useMapbox() {
         });
       }
     }
-  }, [geoJSON, isMapLoaded, searchQuery, activeSection, searchParams]);
+  }, [geoJSON, isMapLoaded, searchQuery, activeSection, searchParams, shouldAnimate]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;

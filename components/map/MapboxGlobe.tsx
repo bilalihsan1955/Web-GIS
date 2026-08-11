@@ -13,8 +13,16 @@ import { useMapStore } from '@/store/useMapStore';
  *
  * The heavy lifting lives in `useMapbox` to keep this component thin.
  */
-export default function MapboxGlobe({ adminId, className = "absolute inset-0 h-screen w-full" }: { adminId?: string; className?: string }) {
-  const { mapContainerRef } = useMapbox();
+export default function MapboxGlobe({ 
+  adminId, 
+  shouldAnimate = true, 
+  className = "absolute inset-0 h-screen w-full" 
+}: { 
+  adminId?: string; 
+  shouldAnimate?: boolean; 
+  className?: string 
+}) {
+  const { mapContainerRef } = useMapbox({ shouldAnimate });
   const fetchNodes = useMapStore((s) => s.fetchNodes);
   const isLoading = useMapStore((s) => s.isLoading);
 
