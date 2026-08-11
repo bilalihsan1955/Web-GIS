@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient, createClient } from '@/utils/supabase/server';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB to support high-res compressed/uncompressed 360 panoramas
@@ -35,23 +33,28 @@ export async function POST(req: Request) {
     // Sanitize filename
     const safeName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '');
     const fileName = `${Date.now()}_${safeName}`;
-    
-    // Ensure public/uploads directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    try {
-      await fs.access(uploadDir);
-    } catch {
-      await fs.mkdir(uploadDir, { recursive: true });
+
+    const adminClient = createAdminClient();
+
+    // Upload file directly to Supabase Storage bucket 'panoramas'
+    const { data: uploadData, error: uploadError } = await adminClient.storage
+      .from('panoramas')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Supabase Storage Upload Error:', uploadError);
+      return NextResponse.json({ error: `Supabase Storage upload failed: ${uploadError.message}` }, { status: 500 });
     }
 
-    // Write file
-    const filePath = path.join(uploadDir, fileName);
-    await fs.writeFile(filePath, buffer);
+    // Retrieve public URL from Supabase Storage
+    const { data: urlData } = adminClient.storage
+      .from('panoramas')
+      .getPublicUrl(fileName);
 
-    // Return the public URL path for the frontend
-    const publicUrl = `/uploads/${fileName}`;
-
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({ url: urlData.publicUrl });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -68,21 +71,11 @@ export async function DELETE(req: Request) {
     const { fileName } = await req.json();
     if (!fileName) return NextResponse.json({ error: 'No filename provided' }, { status: 400 });
 
-    const safeName = fileName.replace(/[^a-zA-Z0-9.-_]/g, '');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    const filePath = path.join(uploadDir, safeName);
+    const safeName = fileName.split('/').pop()?.replace(/[^a-zA-Z0-9.-_]/g, '');
+    if (!safeName) return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
 
-    // Guard against directory traversal outside public/uploads
-    if (!path.resolve(filePath).startsWith(path.resolve(uploadDir))) {
-      return NextResponse.json({ error: 'Forbidden path' }, { status: 403 });
-    }
-
-    try {
-      await fs.access(filePath);
-      await fs.unlink(filePath);
-    } catch {
-      // File already gone or inaccessible
-    }
+    const adminClient = createAdminClient();
+    await adminClient.storage.from('panoramas').remove([safeName]);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
