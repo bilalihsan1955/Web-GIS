@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronDown, Edit, Trash2, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import DuplicateNodesModal from './DuplicateNodesModal';
 
 interface NodesTableProps {
   userRole: string;
@@ -13,6 +14,8 @@ interface NodesTableProps {
   setSectionFilter: (section: string) => void;
   dynamicSections: string[];
   filteredNodes: any[];
+  allNodes: any[];
+  fetchData: () => void;
   openEditModal: (node: any) => void;
   openDeleteModal: (nodeId: string, imageUrl: string, locationId: string) => void;
 }
@@ -28,6 +31,8 @@ export default function NodesTable({
   setSectionFilter,
   dynamicSections,
   filteredNodes,
+  allNodes,
+  fetchData,
   openEditModal,
   openDeleteModal
 }: NodesTableProps) {
@@ -35,6 +40,7 @@ export default function NodesTable({
   const [isSectionFilterOpen, setIsSectionFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -92,6 +98,15 @@ export default function NodesTable({
             </>
           )}
         </div>
+
+        {/* Check Duplicates Button */}
+        <button
+          onClick={() => setIsDuplicateModalOpen(true)}
+          className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 transition-all font-bold text-sm whitespace-nowrap cursor-pointer"
+        >
+          <Copy className="w-4 h-4" />
+          {t('checkDuplicates') || 'Check Duplicates'}
+        </button>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px]  overflow-hidden flex flex-col">
@@ -291,6 +306,13 @@ export default function NodesTable({
           </div>
         )}
       </div>
+      {/* Duplicate Nodes Modal */}
+      <DuplicateNodesModal
+        isOpen={isDuplicateModalOpen}
+        onClose={() => setIsDuplicateModalOpen(false)}
+        nodes={allNodes}
+        fetchData={fetchData}
+      />
     </section>
   );
 }

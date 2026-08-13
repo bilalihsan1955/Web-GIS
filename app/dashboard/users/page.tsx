@@ -55,6 +55,7 @@ export default function UsersManagementPage() {
   const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [confirmEmailInput, setConfirmEmailInput] = useState('');
 
   useEffect(() => {
     setCurrentPage(1);
@@ -169,15 +170,18 @@ export default function UsersManagementPage() {
   };
 
   const openDeleteModal = async (u: AppUser) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.id === u.id) {
-      // Create a visually coherent way to deny self-deletion without browser alerts
+    const isTargetCompanyOwner = u.role === 'admin' && !u.parent_admin_id;
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+    // Self-deletion guard: only allow for Company Owners (cascade delete themselves)
+    if (currentUser?.id === u.id && !isTargetCompanyOwner) {
       setModalError("You cannot delete your own account.");
       setUserToDelete(null);
       return;
     }
     
     setUserToDelete(u);
+    setConfirmEmailInput('');
     setModalError('');
     setIsDeleteModalOpen(true);
   };
@@ -186,16 +190,29 @@ export default function UsersManagementPage() {
     if (!userToDelete) return;
     setModalLoading(true);
     setModalError('');
+
+    const isTargetCompanyOwner = userToDelete.role === 'admin' && !userToDelete.parent_admin_id;
     
     try {
+      const bodyPayload: { userId: string; confirmEmail?: string } = { userId: userToDelete.id };
+      if (isTargetCompanyOwner) {
+        bodyPayload.confirmEmail = confirmEmailInput;
+      }
+
       const res = await fetch('/api/dashboard/users', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userToDelete.id })
+        body: JSON.stringify(bodyPayload)
       });
       if (res.ok) {
         setIsDeleteModalOpen(false);
+        setConfirmEmailInput('');
         fetchUsers();
+        // If superadmin viewing a specific company that was just deleted, go back to overview
+        if (isTargetCompanyOwner && userRole === 'superadmin') {
+          setSelectedCompanyId('all');
+          checkAccessAndFetch();
+        }
       } else {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete user');
@@ -358,23 +375,71 @@ export default function UsersManagementPage() {
     </Modal>
   );
 
+  const isDeleteTargetCompanyOwner = userToDelete?.role === 'admin' && !userToDelete?.parent_admin_id;
+  const isConfirmEmailMatch = confirmEmailInput === userToDelete?.email;
+
   const deleteModalContent = userToDelete && (
     <Modal
       isOpen={isDeleteModalOpen}
-      onClose={() => setIsDeleteModalOpen(false)}
-      title={t('confirmDeletion') || 'Confirm Deletion'}
+      onClose={() => { setIsDeleteModalOpen(false); setConfirmEmailInput(''); }}
+      title={isDeleteTargetCompanyOwner ? (t('deleteCompany') || 'Delete Company & All Data') : (t('confirmDeletion') || 'Confirm Deletion')}
       icon={<AlertCircle className="w-5 h-5 text-red-500" />}
-      maxWidth="max-w-sm"
+      maxWidth={isDeleteTargetCompanyOwner ? 'max-w-md' : 'max-w-sm'}
     >
       <div className="space-y-4">
-        <div className="flex justify-center mb-6 mt-2">
-          <div className="w-16 h-16 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-[20px] flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30">
+        <div className="flex justify-center mb-4 mt-2">
+          <div className={`w-16 h-16 ${isDeleteTargetCompanyOwner ? 'bg-red-100 dark:bg-red-500/30' : 'bg-red-50 dark:bg-red-500/20'} text-red-600 dark:text-red-400 rounded-[20px] flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30`}>
             <Trash2 className="w-8 h-8" />
           </div>
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed text-center">
-          Are you sure you want to permanently delete <strong className="text-zinc-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
-        </p>
+
+        {isDeleteTargetCompanyOwner ? (
+          /* === COMPANY OWNER CASCADE DELETE UI === */
+          <>
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                {t('dangerZone') || 'Danger Zone — Irreversible Action'}
+              </p>
+              <p className="text-sm text-red-600/80 dark:text-red-400/80 leading-relaxed">
+                {t('cascadeDeleteWarning') || 'Deleting this Company Owner will permanently remove:'}
+              </p>
+              <ul className="text-sm text-red-600/80 dark:text-red-400/80 list-disc list-inside space-y-1 ml-1">
+                <li>{t('allGroupUsers') || 'All users in this company group'}</li>
+                <li>{t('allSpatialNodes') || 'All 360° panorama nodes and map data'}</li>
+                <li>{t('allLocations') || 'All locations and sections'}</li>
+                <li>{t('allUploadedImages') || 'All uploaded images from storage'}</li>
+                <li>{t('companyProfile') || 'Company profile, logo, and slug'}</li>
+              </ul>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 ml-1">
+                {t('typeEmailToConfirm') || 'Type the email address to confirm deletion:'}
+              </label>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-2 ml-1 font-mono select-all">{userToDelete.email}</p>
+              <input
+                type="email"
+                value={confirmEmailInput}
+                onChange={(e) => setConfirmEmailInput(e.target.value)}
+                placeholder={userToDelete.email}
+                spellCheck={false}
+                autoComplete="off"
+                className={`w-full bg-zinc-50 dark:bg-black/20 border text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 rounded-xl px-4 py-3 outline-none transition-all text-sm font-mono ${
+                  confirmEmailInput && !isConfirmEmailMatch
+                    ? 'border-red-300 dark:border-red-500/40 focus:ring-1 focus:ring-red-500'
+                    : isConfirmEmailMatch
+                    ? 'border-green-300 dark:border-green-500/40 focus:ring-1 focus:ring-green-500'
+                    : 'border-zinc-200 dark:border-white/10 focus:ring-1 focus:ring-red-500'
+                }`}
+              />
+            </div>
+          </>
+        ) : (
+          /* === REGULAR USER DELETE UI === */
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed text-center">
+            Are you sure you want to permanently delete <strong className="text-zinc-900 dark:text-white">{userToDelete.email}</strong>? This cannot be undone.
+          </p>
+        )}
 
         {modalError && (
           <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20 text-left">
@@ -384,7 +449,7 @@ export default function UsersManagementPage() {
 
         <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
           <button 
-            onClick={() => setIsDeleteModalOpen(false)} 
+            onClick={() => { setIsDeleteModalOpen(false); setConfirmEmailInput(''); }} 
             disabled={modalLoading}
             className="flex-1 px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
           >
@@ -392,11 +457,15 @@ export default function UsersManagementPage() {
           </button>
           <button 
             onClick={confirmDeleteUser}
-            disabled={modalLoading}
-            className="flex-1 px-5 py-2.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors flex items-center justify-center disabled:opacity-50 "
+            disabled={modalLoading || (isDeleteTargetCompanyOwner && !isConfirmEmailMatch)}
+            className={`flex-1 px-5 py-2.5 border font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 ${
+              isDeleteTargetCompanyOwner && !isConfirmEmailMatch
+                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 border-zinc-200 dark:border-zinc-700 cursor-not-allowed'
+                : 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/30'
+            }`}
           >
             {modalLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-            {t('delete') || 'Delete'}
+            {isDeleteTargetCompanyOwner ? (t('deleteCompanyPermanently') || 'Delete Company Permanently') : (t('delete') || 'Delete')}
           </button>
         </div>
       </div>
@@ -609,14 +678,24 @@ export default function UsersManagementPage() {
                           >
                             <Edit className="w-4 h-4 mr-1.5" /> {t('edit') || 'Edit'}
                           </button>
-                          {!(u.role === 'admin' && !u.parent_admin_id) && (
-                            <button 
-                              onClick={() => openDeleteModal(u)}
-                              className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-medium text-sm flex items-center"
-                            >
-                              <Trash2 className="w-4 h-4 mr-1.5" /> {t('delete') || 'Delete'}
-                            </button>
-                          )}
+                          {/* Delete button: shown for regular users always; for Company Owners only when superadmin */}
+                          {(() => {
+                            const isOwner = u.role === 'admin' && !u.parent_admin_id;
+                            // Hide delete for Company Owners unless requester is superadmin
+                            if (isOwner && userRole !== 'superadmin') return null;
+                            return (
+                              <button 
+                                onClick={() => openDeleteModal(u)}
+                                className={`p-2 rounded-lg transition-all font-medium text-sm flex items-center ${
+                                  isOwner
+                                    ? 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10'
+                                    : 'text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+                                }`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1.5" /> {isOwner ? (t('deleteCompany') || 'Delete Company') : (t('delete') || 'Delete')}
+                              </button>
+                            );
+                          })()}
                         </>
                       )}
                     </div>

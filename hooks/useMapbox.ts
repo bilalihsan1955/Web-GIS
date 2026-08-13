@@ -146,20 +146,25 @@ export function useMapbox(options?: { shouldAnimate?: boolean }) {
         source.getClusterExpansionZoom(clusterId, (err, zoom) => {
           if (err) return;
           const geometry = features[0].geometry as GeoJSON.Point;
-          const expansionZoom = Math.min((zoom ?? CLUSTER_MAX_ZOOM) + 2, 22); // +2 agar pasti terpisah
+          const currentZoom = map.getZoom();
 
-          // Guard: cegah pitch handler menginterupsi animasi
+          // Jika getClusterExpansionZoom menghasilkan zoom > currentZoom, gunakan zoom + 1 font level.
+          // Jika node sangat dekat (zoom tidak bertambah), paksa zoom in +2.5 level (hingga max 22) agar terpisah secara visual.
+          const targetZoom = (zoom && zoom > currentZoom) 
+            ? Math.min(zoom + 1.2, 22) 
+            : Math.min(currentZoom + 2.5, 22);
+
           isAnimatingRef.current = true;
 
-          // Hitung pitch dinamis berdasarkan zoom (seperti efek scroll mouse)
-          const targetPitch = Math.min(60, Math.max(0, ((expansionZoom - 4) / 11) * 60));
+          // Hitung pitch dinamis berdasarkan zoom
+          const targetPitch = Math.min(60, Math.max(0, ((targetZoom - 4) / 11) * 60));
 
           (map as any)._isFlying = true;
           map.flyTo({
             center: geometry.coordinates as [number, number],
-            zoom: expansionZoom,
-            pitch: targetPitch, // Miring sesuai kedalaman zoom
-            duration: 1200,
+            zoom: targetZoom,
+            pitch: targetPitch,
+            duration: 1000,
             essential: true,
             easing: (t) => 1 - Math.pow(1 - t, 3)
           });

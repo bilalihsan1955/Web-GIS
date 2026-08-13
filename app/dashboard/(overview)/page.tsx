@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [isManageSectionsModalOpen, setIsManageSectionsModalOpen] = useState(false);
   const { t } = useLanguage();
   const {
+    nodes,
     loading,
     isRoleLoaded,
     isMounted,
@@ -188,6 +189,8 @@ export default function DashboardPage() {
           setSectionFilter={setSectionFilter}
           dynamicSections={dynamicSections}
           filteredNodes={filteredNodes}
+          allNodes={nodes}
+          fetchData={fetchData}
           openEditModal={mutations.openEditModal}
           openDeleteModal={mutations.openDeleteModal}
         />
