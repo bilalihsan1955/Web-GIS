@@ -142,10 +142,24 @@ body {
   100% { transform: translateX(260%) skewX(15deg); }
 }
 
+@keyframes beam-travel-5 {
+  0% { transform: translateX(-50%) skewX(-18deg); }
+  50% { transform: translateX(240%) skewX(-18deg); }
+  100% { transform: translateX(-50%) skewX(-18deg); }
+}
+
+@keyframes beam-travel-6 {
+  0% { transform: translateX(210%) skewX(-8deg); }
+  50% { transform: translateX(-40%) skewX(-8deg); }
+  100% { transform: translateX(210%) skewX(-8deg); }
+}
+
 .animate-beam-1 { animation: beam-travel-1 18s ease-in-out infinite; }
 .animate-beam-2 { animation: beam-travel-2 24s ease-in-out infinite; }
 .animate-beam-3 { animation: beam-travel-3 15s ease-in-out infinite; }
 .animate-beam-4 { animation: beam-travel-4 28s ease-in-out infinite; }
+.animate-beam-5 { animation: beam-travel-5 21s ease-in-out infinite; }
+.animate-beam-6 { animation: beam-travel-6 20s ease-in-out infinite; }
 
 @keyframes fade-in {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }

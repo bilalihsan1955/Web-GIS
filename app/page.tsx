@@ -12,27 +12,33 @@ export default function RootLandingPage() {
   return (
     <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans text-zinc-900 dark:text-zinc-50 selection:bg-cyan-200 dark:selection:bg-cyan-900 overflow-x-hidden overflow-y-auto flex flex-col items-center justify-center relative py-12 px-4 sm:px-6">
       
-      {/* ── 1. Subtle Tile Grid Pattern ── */}
+      {/* ── 1. Ultra-Subtle Tile Grid Pattern (Long & Gradual Fade-Out Gradient) ── */}
       <div 
-        className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_0%,#000_70%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_80%_70%_at_50%_0%,#000_70%,transparent_100%)]" 
+        className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.025)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.7)_45%,rgba(0,0,0,0.25)_75%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.7)_45%,rgba(0,0,0,0.25)_75%,transparent_100%)]" 
       />
 
-      {/* ── 2. 4 Layered Linear Moving Spotlight Beams ── */}
+      {/* ── 2. 6 Multi-Layered Moving Spotlight Beams (Subtly Varied Calibrated Brightness per Layer) ── */}
       <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-        {/* Beam 1: Electric Cyan & Bright Teal */}
-        <div className="absolute -top-[20%] left-0 w-[300px] sm:w-[480px] h-[140%] bg-gradient-to-b from-cyan-400/40 via-teal-400/25 via-cyan-600/10 to-transparent blur-[65px] sm:blur-[95px] animate-beam-1" />
+        {/* Beam 1: Electric Cyan & Bright Teal (Brightness: 32%) */}
+        <div className="absolute -top-[10%] left-0 w-[300px] sm:w-[460px] h-[110%] bg-gradient-to-b from-cyan-400/32 via-teal-400/20 via-cyan-600/08 to-transparent blur-[75px] sm:blur-[105px] animate-beam-1" />
         
-        {/* Beam 2: Deep Sapphire & Indigo - Darker Contrast Tone */}
-        <div className="absolute -top-[20%] left-0 w-[280px] sm:w-[420px] h-[140%] bg-gradient-to-b from-blue-600/35 via-indigo-500/20 via-blue-900/15 to-transparent blur-[75px] sm:blur-[105px] animate-beam-2" />
+        {/* Beam 2: Deep Sapphire & Indigo (Brightness: 28%) */}
+        <div className="absolute -top-[10%] left-0 w-[300px] sm:w-[450px] h-[150%] bg-gradient-to-b from-blue-500/28 via-indigo-500/18 via-blue-800/08 to-transparent blur-[85px] sm:blur-[115px] animate-beam-2" />
 
-        {/* Beam 3: Emerald Cyan & Dark Teal */}
-        <div className="absolute -top-[20%] left-0 w-[220px] sm:w-[350px] h-[140%] bg-gradient-to-b from-teal-400/30 via-cyan-500/20 via-emerald-800/15 to-transparent blur-[55px] sm:blur-[85px] animate-beam-3" />
+        {/* Beam 3: Emerald Cyan & Dark Teal (Brightness: 25%) */}
+        <div className="absolute -top-[10%] left-0 w-[240px] sm:w-[380px] h-[120%] bg-gradient-to-b from-teal-400/25 via-cyan-400/16 via-emerald-600/08 to-transparent blur-[70px] sm:blur-[100px] animate-beam-3" />
 
-        {/* Beam 4: Royal Blue & Sky Glow */}
-        <div className="absolute -top-[20%] left-0 w-[380px] sm:w-[580px] h-[140%] bg-gradient-to-b from-sky-400/25 via-blue-500/15 via-slate-700/10 to-transparent blur-[85px] sm:blur-[125px] animate-beam-4" />
+        {/* Beam 4: Royal Blue & Sky Glow (Brightness: 30%) */}
+        <div className="absolute -top-[10%] left-0 w-[360px] sm:w-[540px] h-[90%] bg-gradient-to-b from-sky-400/30 via-blue-500/18 via-slate-600/08 to-transparent blur-[95px] sm:blur-[135px] animate-beam-4" />
 
-        {/* Linear Soft Top-to-Bottom Light Base Curtain */}
-        <div className="absolute top-0 left-0 w-full h-[100%] bg-[linear-gradient(to_bottom,rgba(34,211,238,0.15)_0%,rgba(20,184,166,0.05)_40%,transparent_80%)] pointer-events-none" />
+        {/* Beam 5: Deep Violet & Soft Indigo (Brightness: 27%) */}
+        <div className="absolute -top-[10%] left-0 w-[320px] sm:w-[480px] h-[130%] bg-gradient-to-b from-violet-500/27 via-indigo-500/17 via-slate-700/08 to-transparent blur-[85px] sm:blur-[125px] animate-beam-5" />
+
+        {/* Beam 6: Northern Emerald & Mint Aquamarine (Brightness: 29%) */}
+        <div className="absolute -top-[10%] left-0 w-[340px] sm:w-[500px] h-[140%] bg-gradient-to-b from-emerald-400/29 via-teal-300/18 via-cyan-600/08 to-transparent blur-[80px] sm:blur-[110px] animate-beam-6" />
+
+        {/* Soft Ambient Base Curtain */}
+        <div className="absolute top-0 left-0 w-full h-[120%] bg-[linear-gradient(to_bottom,rgba(34,211,238,0.14)_0%,rgba(20,184,166,0.06)_45%,transparent_75%)] pointer-events-none" />
       </div>
 
       {/* Main Hero Container */}
