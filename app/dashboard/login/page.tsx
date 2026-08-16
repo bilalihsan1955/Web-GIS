@@ -45,21 +45,21 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen font-sans items-center justify-center bg-zinc-50 dark:bg-[#0a0a0a] overflow-hidden relative p-4">
       
-      {/* ── 6 Multi-Layered Moving Spotlight Beams (Subtly Varied Calibrated Brightness per Layer) ── */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-        {/* Beam 1: Electric Cyan & Bright Teal (Brightness: 32%) */}
+      {/* ── 6 Multi-Layered Moving Spotlight Beams (Softened to 55% opacity in Light Mode) ── */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-55 dark:opacity-100 transition-opacity">
+        {/* Beam 1: Electric Cyan & Bright Teal */}
         <div className="absolute -top-[10%] left-0 w-[280px] sm:w-[440px] h-[110%] bg-gradient-to-b from-cyan-400/32 via-teal-400/20 via-cyan-600/08 to-transparent blur-[75px] sm:blur-[105px] animate-beam-1" />
         
-        {/* Beam 2: Deep Sapphire & Indigo (Brightness: 28%) */}
+        {/* Beam 2: Deep Sapphire & Indigo */}
         <div className="absolute -top-[10%] left-0 w-[300px] sm:w-[460px] h-[150%] bg-gradient-to-b from-blue-500/28 via-indigo-500/18 via-blue-800/08 to-transparent blur-[85px] sm:blur-[115px] animate-beam-2" />
 
-        {/* Beam 4: Royal Blue & Sky Glow (Brightness: 30%) */}
+        {/* Beam 4: Royal Blue & Sky Glow */}
         <div className="absolute -top-[10%] left-0 w-[360px] sm:w-[540px] h-[90%] bg-gradient-to-b from-sky-400/30 via-blue-500/18 via-slate-600/08 to-transparent blur-[95px] sm:blur-[135px] animate-beam-4" />
 
-        {/* Beam 5: Deep Violet & Soft Indigo (Brightness: 27%) */}
+        {/* Beam 5: Deep Violet & Soft Indigo */}
         <div className="absolute -top-[10%] left-0 w-[320px] sm:w-[480px] h-[130%] bg-gradient-to-b from-violet-500/27 via-indigo-500/17 via-slate-700/08 to-transparent blur-[85px] sm:blur-[125px] animate-beam-5" />
 
-        {/* Beam 6: Northern Emerald & Mint Aquamarine (Brightness: 29%) */}
+        {/* Beam 6: Northern Emerald & Mint Aquamarine */}
         <div className="absolute -top-[10%] left-0 w-[340px] sm:w-[500px] h-[140%] bg-gradient-to-b from-emerald-400/29 via-teal-300/18 via-cyan-600/08 to-transparent blur-[80px] sm:blur-[110px] animate-beam-6" />
 
         {/* Soft Ambient Base Curtain */}
@@ -69,9 +69,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md animate-fade-in relative z-10">
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] p-8 md:p-10 shadow-sm">
           <div className="mb-8 text-center">
-            {/* Logo and Brand Name without container box */}
+            {/* Logo and Brand Name (Masked Black EXCLUSIVELY in Light Mode, Original Logo in Dark Mode) */}
             <div className="flex items-center justify-center gap-3 mb-6">
-              <Image src="/Logo.webp" alt="bws360kaltim Logo" width={48} height={48} className="w-10 h-10 object-contain drop-shadow-sm" />
+              <Image 
+                src="/Logo.webp" 
+                alt="bws360kaltim Logo" 
+                width={48} 
+                height={48} 
+                className="w-10 h-10 object-contain brightness-0 dark:brightness-100 dark:invert-0 transition-all" 
+              />
               <span className={`${bricolage.className} text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-white`}>
                 bws360kaltim
               </span>

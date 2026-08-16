@@ -12,29 +12,29 @@ export default function RootLandingPage() {
   return (
     <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans text-zinc-900 dark:text-zinc-50 selection:bg-cyan-200 dark:selection:bg-cyan-900 overflow-x-hidden overflow-y-auto flex flex-col items-center justify-center relative py-12 px-4 sm:px-6">
       
-      {/* ── 1. Ultra-Subtle Tile Grid Pattern (Long & Gradual Fade-Out Gradient) ── */}
+      {/* ── 1. Clear & Defined Tile Grid Pattern (Long Gradual Fade-Out Gradient) ── */}
       <div 
-        className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.025)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.7)_45%,rgba(0,0,0,0.25)_75%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.7)_45%,rgba(0,0,0,0.25)_75%,transparent_100%)]" 
+        className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.075)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.075)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.8)_35%,rgba(0,0,0,0.5)_55%,rgba(0,0,0,0.2)_78%,transparent_95%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_15%,rgba(0,0,0,0.8)_35%,rgba(0,0,0,0.5)_55%,rgba(0,0,0,0.2)_78%,transparent_95%)]" 
       />
 
-      {/* ── 2. 6 Multi-Layered Moving Spotlight Beams (Subtly Varied Calibrated Brightness per Layer) ── */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-        {/* Beam 1: Electric Cyan & Bright Teal (Brightness: 32%) */}
+      {/* ── 2. 6 Multi-Layered Moving Spotlight Beams (Softened to 55% opacity in Light Mode) ── */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-55 dark:opacity-100 transition-opacity">
+        {/* Beam 1: Electric Cyan & Bright Teal */}
         <div className="absolute -top-[10%] left-0 w-[300px] sm:w-[460px] h-[110%] bg-gradient-to-b from-cyan-400/32 via-teal-400/20 via-cyan-600/08 to-transparent blur-[75px] sm:blur-[105px] animate-beam-1" />
         
-        {/* Beam 2: Deep Sapphire & Indigo (Brightness: 28%) */}
+        {/* Beam 2: Deep Sapphire & Indigo */}
         <div className="absolute -top-[10%] left-0 w-[300px] sm:w-[450px] h-[150%] bg-gradient-to-b from-blue-500/28 via-indigo-500/18 via-blue-800/08 to-transparent blur-[85px] sm:blur-[115px] animate-beam-2" />
 
-        {/* Beam 3: Emerald Cyan & Dark Teal (Brightness: 25%) */}
+        {/* Beam 3: Emerald Cyan & Dark Teal */}
         <div className="absolute -top-[10%] left-0 w-[240px] sm:w-[380px] h-[120%] bg-gradient-to-b from-teal-400/25 via-cyan-400/16 via-emerald-600/08 to-transparent blur-[70px] sm:blur-[100px] animate-beam-3" />
 
-        {/* Beam 4: Royal Blue & Sky Glow (Brightness: 30%) */}
+        {/* Beam 4: Royal Blue & Sky Glow */}
         <div className="absolute -top-[10%] left-0 w-[360px] sm:w-[540px] h-[90%] bg-gradient-to-b from-sky-400/30 via-blue-500/18 via-slate-600/08 to-transparent blur-[95px] sm:blur-[135px] animate-beam-4" />
 
-        {/* Beam 5: Deep Violet & Soft Indigo (Brightness: 27%) */}
+        {/* Beam 5: Deep Violet & Soft Indigo */}
         <div className="absolute -top-[10%] left-0 w-[320px] sm:w-[480px] h-[130%] bg-gradient-to-b from-violet-500/27 via-indigo-500/17 via-slate-700/08 to-transparent blur-[85px] sm:blur-[125px] animate-beam-5" />
 
-        {/* Beam 6: Northern Emerald & Mint Aquamarine (Brightness: 29%) */}
+        {/* Beam 6: Northern Emerald & Mint Aquamarine */}
         <div className="absolute -top-[10%] left-0 w-[340px] sm:w-[500px] h-[140%] bg-gradient-to-b from-emerald-400/29 via-teal-300/18 via-cyan-600/08 to-transparent blur-[80px] sm:blur-[110px] animate-beam-6" />
 
         {/* Soft Ambient Base Curtain */}
@@ -44,14 +44,14 @@ export default function RootLandingPage() {
       {/* Main Hero Container */}
       <main className="w-full max-w-5xl mx-auto flex flex-col items-center text-center z-10 relative my-auto py-8">
         
-        {/* Single Logo & Brand Name directly above headline */}
+        {/* Single Logo & Brand Name directly above headline (Masked Black EXCLUSIVELY in Light Mode, Original Logo in Dark Mode) */}
         <div className="mb-6 flex items-center justify-center gap-3.5">
           <Image 
             src="/Logo.webp" 
             alt="bws360kaltim Logo" 
             width={48} 
             height={48} 
-            className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md" 
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain brightness-0 dark:brightness-100 dark:invert-0 transition-all" 
           />
           <span className={`${bricolage.className} text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white`}>
             bws360kaltim
