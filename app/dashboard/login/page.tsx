@@ -2,8 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
-import { Radio, Loader2, Eye, EyeOff, MapPin, Layers, Box } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Bricolage_Grotesque } from 'next/font/google';
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,13 +47,16 @@ export default function LoginPage() {
       
       <div className="w-full max-w-md animate-fade-in relative z-10">
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] p-8 md:p-10 shadow-sm">
-          <div className="mb-10 text-center">
-            <div className="flex justify-center items-center mb-6">
-              <div className="w-12 h-12 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 rounded-[16px] flex items-center justify-center border border-cyan-100 dark:border-cyan-500/20">
-                <Radio className="w-6 h-6" />
-              </div>
+          <div className="mb-8 text-center">
+            {/* Logo and Brand Name without container box */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <Image src="/Logo.webp" alt="bws360kaltim Logo" width={48} height={48} className="w-10 h-10 object-contain" />
+              <span className={`${bricolage.className} text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-white`}>
+                bws360kaltim
+              </span>
             </div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">
+
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">
               Admin Access
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm">

@@ -138,6 +138,8 @@ export const dictionaries = {
     indexSubtitle: 'Platform cerdas untuk memetakan, mengelola, dan memvisualisasikan aset spasial perusahaan Anda dalam lingkungan 3D interaktif.',
     startNow: 'Mulai Sekarang',
     backToCompanies: 'Kembali ke Daftar Perusahaan',
+    spatialIntelligencePlatform: 'Platform Intelijen Spasial',
+    allRightsReserved: 'Hak cipta dilindungi undang-undang.',
     
     // Cascade Delete Company
     deleteCompany: 'Hapus Perusahaan & Semua Data',
@@ -311,6 +313,8 @@ export const dictionaries = {
     indexSubtitle: 'Smart platform to map, manage, and visualize your company\'s spatial assets in an interactive 3D environment.',
     startNow: 'Start Now',
     backToCompanies: 'Back to Company List',
+    spatialIntelligencePlatform: 'Spatial Intelligence Platform',
+    allRightsReserved: 'All rights reserved.',
     
     // Cascade Delete Company
     deleteCompany: 'Delete Company & All Data',

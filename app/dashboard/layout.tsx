@@ -10,6 +10,12 @@ import LogoutButton from '@/components/auth/LogoutButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { Bricolage_Grotesque } from 'next/font/google';
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
@@ -285,8 +291,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* SCROLLABLE PAGE CONTENT */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 custom-scrollbar bg-zinc-50/50 dark:bg-[#09090B]">
-          {children}
+        <div className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 custom-scrollbar bg-zinc-50/50 dark:bg-[#09090B] flex flex-col justify-between">
+          <div className="flex-1">
+            {children}
+          </div>
+
+          {/* DASHBOARD FOOTER */}
+          <footer className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 dark:text-zinc-500 gap-3">
+            <div className="flex items-center gap-2">
+              <span className={`${bricolage.className} font-extrabold text-sm text-zinc-900 dark:text-zinc-200 tracking-tight`}>bws360kaltim</span>
+              <span>— {t('spatialIntelligencePlatform') || 'Platform Intelijen Spasial'}</span>
+            </div>
+            <div>
+              © {new Date().getFullYear()} <span className={`${bricolage.className} font-bold text-zinc-700 dark:text-zinc-400`}>bws360kaltim</span>. All rights reserved.
+            </div>
+          </footer>
         </div>
       </main>
     </div>

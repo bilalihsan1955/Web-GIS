@@ -117,6 +117,36 @@ body {
   50% { opacity: 1; }
 }
 
+/* ── Multi-Layered Linear Moving Spotlight Beam Animations ── */
+@keyframes beam-travel-1 {
+  0% { transform: translateX(-60%) skewX(-12deg); }
+  50% { transform: translateX(250%) skewX(-12deg); }
+  100% { transform: translateX(-60%) skewX(-12deg); }
+}
+
+@keyframes beam-travel-2 {
+  0% { transform: translateX(230%) skewX(8deg); }
+  50% { transform: translateX(-50%) skewX(8deg); }
+  100% { transform: translateX(230%) skewX(8deg); }
+}
+
+@keyframes beam-travel-3 {
+  0% { transform: translateX(-40%) skewX(-5deg); }
+  50% { transform: translateX(270%) skewX(-5deg); }
+  100% { transform: translateX(-40%) skewX(-5deg); }
+}
+
+@keyframes beam-travel-4 {
+  0% { transform: translateX(260%) skewX(15deg); }
+  50% { transform: translateX(-60%) skewX(15deg); }
+  100% { transform: translateX(260%) skewX(15deg); }
+}
+
+.animate-beam-1 { animation: beam-travel-1 18s ease-in-out infinite; }
+.animate-beam-2 { animation: beam-travel-2 24s ease-in-out infinite; }
+.animate-beam-3 { animation: beam-travel-3 15s ease-in-out infinite; }
+.animate-beam-4 { animation: beam-travel-4 28s ease-in-out infinite; }
+
 @keyframes fade-in {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
