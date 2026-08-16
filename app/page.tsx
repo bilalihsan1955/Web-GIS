@@ -10,25 +10,25 @@ const bricolage = Bricolage_Grotesque({
 
 export default function RootLandingPage() {
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans text-zinc-900 dark:text-zinc-50 selection:bg-cyan-200 dark:selection:bg-cyan-900 overflow-x-hidden overflow-y-auto flex flex-col items-center justify-between relative py-12 px-4 sm:px-6">
+    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans text-zinc-900 dark:text-zinc-50 selection:bg-cyan-200 dark:selection:bg-cyan-900 overflow-x-hidden overflow-y-auto flex flex-col items-center justify-center relative py-12 px-4 sm:px-6">
       
       {/* ── 1. Subtle Tile Grid Pattern ── */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_0%,#000_70%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_80%_70%_at_50%_0%,#000_70%,transparent_100%)]" 
       />
 
-      {/* ── 2. 4 Layered Linear Moving Spotlight Beams (Varied Tones, Speeds & Angles) ── */}
+      {/* ── 2. 4 Layered Linear Moving Spotlight Beams ── */}
       <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-        {/* Beam 1: Electric Cyan & Bright Teal (-12deg angle, 18s) */}
+        {/* Beam 1: Electric Cyan & Bright Teal */}
         <div className="absolute -top-[20%] left-0 w-[300px] sm:w-[480px] h-[140%] bg-gradient-to-b from-cyan-400/40 via-teal-400/25 via-cyan-600/10 to-transparent blur-[65px] sm:blur-[95px] animate-beam-1" />
         
-        {/* Beam 2: Deep Sapphire & Indigo - Darker Contrast Tone (8deg angle, 24s) */}
+        {/* Beam 2: Deep Sapphire & Indigo - Darker Contrast Tone */}
         <div className="absolute -top-[20%] left-0 w-[280px] sm:w-[420px] h-[140%] bg-gradient-to-b from-blue-600/35 via-indigo-500/20 via-blue-900/15 to-transparent blur-[75px] sm:blur-[105px] animate-beam-2" />
 
-        {/* Beam 3: Emerald Cyan & Dark Teal (-5deg angle, 15s fast sweep) */}
+        {/* Beam 3: Emerald Cyan & Dark Teal */}
         <div className="absolute -top-[20%] left-0 w-[220px] sm:w-[350px] h-[140%] bg-gradient-to-b from-teal-400/30 via-cyan-500/20 via-emerald-800/15 to-transparent blur-[55px] sm:blur-[85px] animate-beam-3" />
 
-        {/* Beam 4: Royal Blue & Sky Glow - Wider Ambient (15deg angle, 28s slow sweep) */}
+        {/* Beam 4: Royal Blue & Sky Glow */}
         <div className="absolute -top-[20%] left-0 w-[380px] sm:w-[580px] h-[140%] bg-gradient-to-b from-sky-400/25 via-blue-500/15 via-slate-700/10 to-transparent blur-[85px] sm:blur-[125px] animate-beam-4" />
 
         {/* Linear Soft Top-to-Bottom Light Base Curtain */}
@@ -80,11 +80,6 @@ export default function RootLandingPage() {
         </div>
 
       </main>
-
-      {/* Footer */}
-      <footer className="w-full max-w-6xl mx-auto flex items-center justify-center z-10 relative pt-6 text-xs text-zinc-400">
-        <span className={`${bricolage.className} font-extrabold text-sm text-zinc-700 dark:text-zinc-300 tracking-tight`}>bws360kaltim</span> &nbsp;— All Rights Reserved
-      </footer>
 
     </div>
   );
