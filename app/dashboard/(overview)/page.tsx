@@ -138,7 +138,10 @@ export default function DashboardPage() {
               {activeCompany?.company_logo ? (
                 <Image src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-cover" />
               ) : (
-                <Building2 className="w-6 h-6" />
+                <div className="w-full h-full p-1 flex items-center justify-center relative">
+                  <Image src="/Logo dark.png" alt={activeCompany?.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain hidden dark:block" />
+                  <Image src="/Logo light.png" alt={activeCompany?.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain block dark:hidden" />
+                </div>
               )}
             </div>
             <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tighter">

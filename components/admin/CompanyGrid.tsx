@@ -69,7 +69,10 @@ export default function CompanyGrid({ adminGroups, onSelect, loading }: CompanyG
                 {group.company_logo ? (
                   <Image src={group.company_logo} alt={group.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-cover" />
                 ) : (
-                  <Building2 className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                  <div className="w-full h-full p-1 flex items-center justify-center relative">
+                    <Image src="/Logo dark.png" alt={group.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain hidden dark:block" />
+                    <Image src="/Logo light.png" alt={group.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain block dark:hidden" />
+                  </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">

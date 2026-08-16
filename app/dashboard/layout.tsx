@@ -116,17 +116,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className={`flex items-center min-w-0 ${isCollapsed ? 'justify-center w-full' : 'pr-2'}`}>
           {isLoadingProfile || isLoadingRole ? (
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg`}></div>
-          ) : role === 'superadmin' ? (
-            <div className={`bg-zinc-950 dark:bg-white ${isCollapsed ? '' : 'mr-3'} shrink-0 w-8 h-8 flex items-center justify-center rounded-lg`} title="Geo Admin">
-              <Compass className="w-5 h-5 text-white dark:text-zinc-950" />
-            </div>
-          ) : companyProfile?.company_logo ? (
-            <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg`} title={companyProfile.company_name || 'WebGIS Platform'}>
-              <Image src={companyProfile.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
+          ) : (role === 'superadmin' || !companyProfile?.company_logo) ? (
+            <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center rounded-lg relative`} title={role === 'superadmin' ? 'Geo Admin' : (companyProfile?.company_name || 'WebGIS Platform')}>
+              <Image src="/Logo dark.png" alt="Geo Admin Logo" width={32} height={32} className="w-full h-full object-contain hidden dark:block" />
+              <Image src="/Logo light.png" alt="Geo Admin Logo" width={32} height={32} className="w-full h-full object-contain block dark:hidden" />
             </div>
           ) : (
-            <div className={`bg-zinc-950 dark:bg-white ${isCollapsed ? '' : 'mr-3'} shrink-0 w-8 h-8 flex items-center justify-center rounded-lg`} title={companyProfile?.company_name || 'WebGIS Platform'}>
-              <Compass className="w-5 h-5 text-white dark:text-zinc-950" />
+            <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg`} title={companyProfile?.company_name || 'WebGIS Platform'}>
+              <Image src={companyProfile.company_logo} alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
             </div>
           )}
           

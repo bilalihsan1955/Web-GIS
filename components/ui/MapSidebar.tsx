@@ -271,8 +271,9 @@ export default function MapSidebar({
               <Image src={displayIcon} width={32} height={32} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
             </div>
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0">
-              <Radio className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shrink-0 relative">
+              <Image src="/Logo dark.png" width={32} height={32} className="h-full w-full object-contain hidden dark:block" alt={displayName} />
+              <Image src="/Logo light.png" width={32} height={32} className="h-full w-full object-contain block dark:hidden" alt={displayName} />
             </div>
           )}
           <div className="min-w-0">
@@ -308,8 +309,9 @@ export default function MapSidebar({
                   <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
                 </div>
               ) : (
-                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-400/15 overflow-hidden shrink-0`}>
-                  <Radio className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg overflow-hidden shrink-0 relative`}>
+                  <Image src="/Logo dark.png" width={36} height={36} className="h-full w-full object-contain hidden dark:block" alt={displayName} />
+                  <Image src="/Logo light.png" width={36} height={36} className="h-full w-full object-contain block dark:hidden" alt={displayName} />
                 </div>
               )}
               <div className="flex-1 pr-1">

@@ -136,8 +136,9 @@ export default function ClientAdminPage({ adminId }: { adminId: string }) {
                   />
                 </div>
               ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 mb-6 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-xl backdrop-blur-xl">
-                  <Globe2 className="w-8 sm:w-10 h-8 sm:h-10" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-6 rounded-2xl overflow-hidden bg-white/10 p-2 border border-white/20 shadow-2xl backdrop-blur-xl flex items-center justify-center relative">
+                  <Image src="/Logo dark.png" alt={profile?.company_name || 'Logo'} width={96} height={96} className="w-full h-full object-contain hidden dark:block" />
+                  <Image src="/Logo light.png" alt={profile?.company_name || 'Logo'} width={96} height={96} className="w-full h-full object-contain block dark:hidden" />
                 </div>
               )}
 
