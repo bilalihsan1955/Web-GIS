@@ -118,8 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg`}></div>
           ) : (role === 'superadmin' || !companyProfile?.company_logo) ? (
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center rounded-lg relative`} title={role === 'superadmin' ? 'Geo Admin' : (companyProfile?.company_name || 'WebGIS Platform')}>
-              <Image src="/Logo dark.png" alt="Geo Admin Logo" width={32} height={32} className="w-full h-full object-contain hidden dark:block" />
-              <Image src="/Logo light.png" alt="Geo Admin Logo" width={32} height={32} className="w-full h-full object-contain block dark:hidden" />
+              <Image src="/Logo.webp" alt="Logo" width={32} height={32} className="w-full h-full object-contain" />
             </div>
           ) : (
             <div className={`w-8 h-8 ${isCollapsed ? '' : 'mr-3'} shrink-0 overflow-hidden flex items-center justify-center bg-white dark:bg-transparent rounded-lg`} title={companyProfile?.company_name || 'WebGIS Platform'}>

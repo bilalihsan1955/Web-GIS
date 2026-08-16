@@ -137,8 +137,7 @@ export default function ClientAdminPage({ adminId }: { adminId: string }) {
                 </div>
               ) : (
                 <div className="w-20 h-20 sm:w-24 sm:h-24 mb-6 rounded-2xl overflow-hidden bg-white/10 p-2 border border-white/20 shadow-2xl backdrop-blur-xl flex items-center justify-center relative">
-                  <Image src="/Logo dark.png" alt={profile?.company_name || 'Logo'} width={96} height={96} className="w-full h-full object-contain hidden dark:block" />
-                  <Image src="/Logo light.png" alt={profile?.company_name || 'Logo'} width={96} height={96} className="w-full h-full object-contain block dark:hidden" />
+                  <Image src="/Logo.webp" alt={profile?.company_name || 'Logo'} width={96} height={96} className="w-full h-full object-contain" />
                 </div>
               )}
 
