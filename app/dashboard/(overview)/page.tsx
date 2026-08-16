@@ -134,13 +134,11 @@ export default function DashboardPage() {
           </button>
           
           <div className="flex items-center gap-4 mt-2">
-            <div className="w-12 h-12 bg-zinc-950 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shrink-0 overflow-hidden">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden relative">
               {activeCompany?.company_logo ? (
-                <Image src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-cover" />
+                <Image src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain" />
               ) : (
-                <div className="w-full h-full p-1 flex items-center justify-center relative">
-                  <Image src="/Logo.webp" alt={activeCompany?.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain" />
-                </div>
+                <Image src="/Logo.webp" alt={activeCompany?.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain" />
               )}
             </div>
             <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tighter">

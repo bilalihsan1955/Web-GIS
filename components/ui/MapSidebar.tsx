@@ -304,8 +304,8 @@ export default function MapSidebar({
               {isLoadingProfile ? (
                 <div className={`${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse shrink-0`}></div>
               ) : displayIcon ? (
-                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 shrink-0`}>
-                  <Image src={displayIcon} width={36} height={36} className="h-full w-full object-cover" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
+                <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg overflow-hidden shrink-0`}>
+                  <Image src={displayIcon} width={36} height={36} className="h-full w-full object-contain" alt={displayName} unoptimized={displayIcon.startsWith('blob:') || displayIcon.startsWith('data:')} />
                 </div>
               ) : (
                 <div className={`flex ${isDashboard ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-lg overflow-hidden shrink-0 relative`}>
