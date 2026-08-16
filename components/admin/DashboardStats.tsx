@@ -1,11 +1,11 @@
-import { MapPin, Users, Layers } from 'lucide-react';
+import { MapPin, Users, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface DashboardStatsProps {
   userRole: string;
   loading: boolean;
   totalNodes: number;
-  totalLocations: number;
+  totalLocations: number; // Represents published locations/nodes count
   totalUsers: number;
 }
 
@@ -43,7 +43,7 @@ export default function DashboardStats({
         )}
       </div>
 
-      {/* Total Locations Card */}
+      {/* Published Locations Card */}
       <div className="flex-1 p-4 sm:p-6 flex items-center hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors min-h-[88px]">
         {loading ? (
           <>
@@ -55,11 +55,11 @@ export default function DashboardStats({
           </>
         ) : (
           <>
-            <div className="h-[52px] sm:h-[58px] w-[52px] sm:w-[58px] rounded-[20px] sm:rounded-[24px] bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/50">
-              <Layers className="h-6 sm:h-7 w-6 sm:w-7 text-blue-600 dark:text-blue-400" />
+            <div className="h-[52px] sm:h-[58px] w-[52px] sm:w-[58px] rounded-[20px] sm:rounded-[24px] bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/50">
+              <CheckCircle2 className="h-6 sm:h-7 w-6 sm:w-7 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="ml-4 sm:ml-5 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">{t('activeLocations')}</p>
+              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">{t('publishedLocations') || 'Lokasi Dipublikasi'}</p>
               <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white mt-0.5 tracking-tight">{totalLocations}</p>
             </div>
           </>

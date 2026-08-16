@@ -178,8 +178,8 @@ export function useDashboardData() {
       // Data is already filtered by Supabase
       setNodes(spatialNodes);
       setTotalNodes(spatialNodes.length);
-      const uniqueLocs = new Set(spatialNodes.map((n: any) => n.location_id));
-      setTotalLocations(uniqueLocs.size);
+      const publishedCount = spatialNodes.filter((n: any) => n.is_published).length;
+      setTotalLocations(publishedCount);
     }
     setLoading(false);
   }, [supabase, selectedCompanyId]);

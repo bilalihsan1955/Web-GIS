@@ -74,6 +74,7 @@ export const dictionaries = {
     // Dashboard Stats
     totalLocations: 'Total Lokasi',
     activeLocations: 'Lokasi Aktif',
+    publishedLocations: 'Lokasi Dipublikasi',
     users: 'Pengguna',
     activeUsers: 'Pengguna Aktif',
     activeNodes: 'Titik Aktif',
@@ -249,6 +250,7 @@ export const dictionaries = {
     // Dashboard Stats
     totalLocations: 'Total Locations',
     activeLocations: 'Active Locations',
+    publishedLocations: 'Published Locations',
     users: 'Users',
     activeUsers: 'Active Users',
     activeNodes: 'Active Nodes',
