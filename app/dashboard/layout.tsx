@@ -299,11 +299,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* DASHBOARD FOOTER */}
           <footer className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 dark:text-zinc-500 gap-3">
             <div className="flex items-center gap-2">
-              <span className={`${bricolage.className} font-extrabold text-sm text-zinc-900 dark:text-zinc-200 tracking-tight`}>bws360kaltim</span>
+              <span className={`${bricolage.className} font-extrabold text-sm text-zinc-900 dark:text-zinc-200 tracking-tight`}>view360</span>
               <span>— {t('spatialIntelligencePlatform') || 'Platform Intelijen Spasial'}</span>
             </div>
             <div>
-              © {new Date().getFullYear()} <span className={`${bricolage.className} font-bold text-zinc-700 dark:text-zinc-400`}>bws360kaltim</span>. All rights reserved.
+              © {new Date().getFullYear()} <span className={`${bricolage.className} font-bold text-zinc-700 dark:text-zinc-400`}>view360</span>. All rights reserved.
             </div>
           </footer>
         </div>

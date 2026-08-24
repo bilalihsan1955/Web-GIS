@@ -73,13 +73,13 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-3 mb-6">
               <Image 
                 src="/Logo.webp" 
-                alt="bws360kaltim Logo" 
+                alt="view360 Logo" 
                 width={48} 
                 height={48} 
                 className="w-10 h-10 object-contain brightness-0 dark:brightness-100 dark:invert-0 transition-all" 
               />
               <span className={`${bricolage.className} text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-white`}>
-                bws360kaltim
+                view360
               </span>
             </div>
 

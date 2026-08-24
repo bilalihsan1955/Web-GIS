@@ -48,13 +48,13 @@ export default function RootLandingPage() {
         <div className="mb-6 flex items-center justify-center gap-3.5">
           <Image 
             src="/Logo.webp" 
-            alt="bws360kaltim Logo" 
+            alt="view360 Logo" 
             width={48} 
             height={48} 
             className="w-10 h-10 sm:w-12 sm:h-12 object-contain brightness-0 dark:brightness-100 dark:invert-0 transition-all" 
           />
           <span className={`${bricolage.className} text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white`}>
-            bws360kaltim
+            view360
           </span>
         </div>
 
