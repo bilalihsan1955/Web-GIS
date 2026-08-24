@@ -1,13 +1,13 @@
-# GeoSpatial Web-GIS System Documentation
+# view360 — Web-GIS System Documentation
 
-Selamat datang di dokumentasi sistem **Web-GIS-main**! Dokumentasi ini dirancang agar Anda dapat memahami seluruh arsitektur proyek, fitur produk (PRD), sistem desain (Design System), struktur data, serta panduan pengembangan untuk melanjutkan proyek ini dengan mudah.
+Selamat datang di dokumentasi sistem **view360**! Dokumentasi ini dirancang agar Anda dapat memahami seluruh arsitektur proyek, fitur produk (PRD), sistem desain (Design System), struktur data, serta panduan pengembangan untuk melanjutkan proyek ini dengan mudah.
 
 ---
 
 ## 1. Product Requirements Document (PRD)
 
 ### 1.1. Ringkasan Produk
-Aplikasi **Web-GIS** ini merupakan platform visualisasi spasial berbasis web interaktif. Sistem ini menggabungkan peta bola dunia 3D (3D Globe) dari Mapbox, tampilan peta mini 2D dari Leaflet, dan penampil gambar panorama 360° (Photo Sphere Viewer) untuk memantau stasiun/node spasial secara real-time.
+Aplikasi **view360** ini merupakan platform visualisasi spasial berbasis web interaktif. Sistem ini menggabungkan peta bola dunia 3D (3D Globe) dari Mapbox, tampilan peta mini 2D dari Leaflet, dan penampil gambar panorama 360° (Photo Sphere Viewer) untuk memantau stasiun/node spasial secara real-time.
 
 ### 1.2. Pengguna Sistem (User Personas)
 Sistem memiliki tiga level akses keamanan:
