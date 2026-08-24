@@ -38,10 +38,26 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminSupabase = createAdminClient();
 
-    const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', user.id).single();
+    let user = null;
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData?.user || null;
+
+    if (!user) {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const { data: tokenData } = await adminSupabase.auth.getUser(token);
+        if (tokenData?.user) {
+          user = tokenData.user;
+        }
+      }
+    }
+
+    if (!user) return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan.' }, { status: 401 });
+
+    const { data: roleData } = await adminSupabase.from('user_roles').select('*').eq('user_id', user.id).single();
     if (!roleData) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
@@ -72,8 +88,6 @@ export async function PUT(req: Request) {
       // Make sure it is not empty
       if (!company_slug) company_slug = `company-${Date.now()}`;
     }
-
-    const adminSupabase = createAdminClient();
     
     let updateData: any = {
       company_name,
@@ -109,4 +123,8 @@ export async function PUT(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+export async function POST(req: Request) {
+  return PUT(req);
 }

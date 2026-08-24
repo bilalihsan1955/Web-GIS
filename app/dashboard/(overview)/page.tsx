@@ -111,6 +111,7 @@ export default function DashboardPage() {
           adminGroups={adminGroups} 
           onSelect={setSelectedCompanyId} 
           loading={loading}
+          onRefresh={fetchData}
         />
       </div>
     );

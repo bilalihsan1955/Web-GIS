@@ -129,10 +129,26 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminSupabase = createAdminClient();
 
-    const { data: roleData } = await supabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
+    let user = null;
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData?.user || null;
+
+    if (!user) {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const { data: tokenData } = await adminSupabase.auth.getUser(token);
+        if (tokenData?.user) {
+          user = tokenData.user;
+        }
+      }
+    }
+
+    if (!user) return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan.' }, { status: 401 });
+
+    const { data: roleData } = await adminSupabase.from('user_roles').select('role, parent_admin_id').eq('user_id', user.id).single();
     if (roleData?.role !== 'superadmin' && roleData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 });
     }
@@ -143,8 +159,6 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Invalid request data', details: parsed.error.format() }, { status: 400 });
     }
     const { userId, confirmEmail } = parsed.data;
-
-    const adminSupabase = createAdminClient();
 
     // Fetch target user's role info
     const { data: targetRoleData } = await adminSupabase.from('user_roles').select('role, parent_admin_id, email, company_logo').eq('user_id', userId).single();

@@ -4,16 +4,30 @@ import { createClient, createAdminClient } from '@/utils/supabase/server'
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     
-    // 1. Authenticate the requester
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // 1. Authenticate the requester (via cookies or Bearer token header)
+    let user = null;
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData?.user || null;
+
+    if (!user) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const { data: tokenData } = await adminSupabase.auth.getUser(token);
+        if (tokenData?.user) {
+          user = tokenData.user;
+        }
+      }
+    }
     
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan. Silakan login kembali.' }, { status: 401 })
     }
 
     // 2. Verify requester has 'superadmin' or 'admin' role
-    const { data: userRoleData, error: roleError } = await supabase
+    const { data: userRoleData, error: roleError } = await adminSupabase
       .from('user_roles')
       .select('role, parent_admin_id')
       .eq('user_id', user.id)
@@ -47,8 +61,6 @@ export async function POST(request: Request) {
     }
 
     // 4. Create user using Admin Client (Service Role Key)
-    const adminSupabase = createAdminClient()
-    
     const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
       email,
       password,
