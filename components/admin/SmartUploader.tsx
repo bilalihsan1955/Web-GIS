@@ -114,19 +114,55 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         throw new Error('Upload rejected: No GPS metadata found in image.');
       }
 
-      // Check if node already exists with same coordinates (using tolerance for floating point)
+      // Determine company group user IDs to scope the duplicate GPS coordinate check
+      let targetCompanyOwnerId = assignToGroupId && assignToGroupId !== 'all' ? assignToGroupId : '';
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (!targetCompanyOwnerId) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('parent_admin_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          targetCompanyOwnerId = roleData?.parent_admin_id || user.id;
+        }
+      }
+
+      let groupUserIds: string[] = [];
+      if (targetCompanyOwnerId) {
+        const { data: groupUsers } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .or(`user_id.eq.${targetCompanyOwnerId},parent_admin_id.eq.${targetCompanyOwnerId}`);
+
+        if (groupUsers && groupUsers.length > 0) {
+          groupUserIds = groupUsers.map(u => u.user_id);
+        } else {
+          groupUserIds = [targetCompanyOwnerId];
+        }
+      } else if (user) {
+        groupUserIds = [user.id];
+      }
+
+      // Check if node already exists with same coordinates WITHIN THIS COMPANY GROUP ONLY
       const tolerance = 0.00001; // roughly 1 meter accuracy
-      const { data: existingNodes } = await supabase
+      let checkQuery = supabase
         .from('spatial_nodes')
         .select('id')
         .gte('latitude', exifData.latitude - tolerance)
         .lte('latitude', exifData.latitude + tolerance)
         .gte('longitude', exifData.longitude - tolerance)
-        .lte('longitude', exifData.longitude + tolerance)
-        .limit(1);
+        .lte('longitude', exifData.longitude + tolerance);
+
+      if (groupUserIds.length > 0) {
+        checkQuery = checkQuery.in('created_by', groupUserIds);
+      }
+
+      const { data: existingNodes } = await checkQuery.limit(1);
 
       if (existingNodes && existingNodes.length > 0) {
-        throw new Error('Upload ditolak: Titik panorama dengan koordinat GPS ini sudah ada di dalam sistem.');
+        throw new Error('Upload ditolak: Titik panorama dengan koordinat GPS ini sudah ada di dalam kelompok perusahaan Anda.');
       }
 
       let captureDate = null;
@@ -545,8 +581,8 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
                 </div>
                 
                 <div className="flex items-center justify-center space-x-3 shrink-0">
-                  {fp.status === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-400 shadow-md" />}
-                  {fp.status === 'error' && <AlertTriangle className="w-6 h-6 text-red-400 shadow-md" />}
+                  {fp.status === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-400" />}
+                  {fp.status === 'error' && <AlertTriangle className="w-6 h-6 text-red-400" />}
                   {fp.status === 'needs_details' && (
                     <button 
                       onClick={() => {

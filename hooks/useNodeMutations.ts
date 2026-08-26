@@ -109,51 +109,76 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
         }
       }
 
-      // Handle Location mapping atomically
-      let locId = '';
+      // Handle Location mapping & update in-place
+      let locId = selectedNode.location_id;
       const slug = editLocationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      
-      const { data: existingLoc, error: queryErr } = await supabase
-        .from('locations')
-        .select('id')
-        .eq('slug', slug)
-        .maybeSingle();
 
-      if (queryErr) throw queryErr;
-
-      if (existingLoc) {
-        locId = existingLoc.id;
-        // Update the section (description) of the existing location if changed
-        await supabase.from('locations').update({ description: editLocationDescription, section_id: editLocationSectionId || null }).eq('id', locId);
-      } else {
-        const { data: newLoc, error: insertErr } = await supabase
+      if (locId) {
+        // Direct update on existing location record linked to this node
+        const { error: locUpdateErr } = await supabase
           .from('locations')
-          .insert({ name: editLocationName, slug, description: editLocationDescription, section_id: editLocationSectionId || null })
+          .update({
+            name: editLocationName,
+            slug: slug || `loc-${Date.now()}`,
+            description: editLocationDescription,
+            section_id: editLocationSectionId || null
+          })
+          .eq('id', locId);
+
+        if (locUpdateErr) {
+          console.warn('Location update warning:', locUpdateErr.message || locUpdateErr);
+        }
+      } else {
+        // Fallback: search by slug or create a new location
+        const { data: existingLoc } = await supabase
+          .from('locations')
           .select('id')
-          .single();
-        if (insertErr) throw insertErr;
-        locId = newLoc.id;
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (existingLoc) {
+          locId = existingLoc.id;
+          await supabase
+            .from('locations')
+            .update({
+              name: editLocationName,
+              description: editLocationDescription,
+              section_id: editLocationSectionId || null
+            })
+            .eq('id', locId);
+        } else {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const currentUserId = sessionData?.session?.user?.id;
+
+          const { data: newLoc, error: insertErr } = await supabase
+            .from('locations')
+            .insert({
+              name: editLocationName,
+              slug: slug || `loc-${Date.now()}`,
+              description: editLocationDescription,
+              section_id: editLocationSectionId || null,
+              created_by: selectedNode.created_by || currentUserId
+            })
+            .select('id')
+            .single();
+
+          if (insertErr) throw insertErr;
+          locId = newLoc.id;
+        }
       }
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData.session) {
-        throw new Error('Authentication required');
-      }
-      const userId = sessionData.session.user.id;
-
-      // Update DB Record
-      const { error } = await supabase
+      // Update Spatial Node DB Record (PRESERVING original created_by so node stays in its company group)
+      const { error: nodeUpdateErr } = await supabase
         .from('spatial_nodes')
         .update({
           location_id: locId,
           capture_date: editCaptureDate || null,
           is_published: editIsPublished,
-          image_url: finalImageUrl,
-          created_by: userId
+          image_url: finalImageUrl
         })
         .eq('id', selectedNode.id);
 
-      if (error) throw error;
+      if (nodeUpdateErr) throw nodeUpdateErr;
       
       setIsEditModalOpen(false);
       fetchData(); // Refresh the table

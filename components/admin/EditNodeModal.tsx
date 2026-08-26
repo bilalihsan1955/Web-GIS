@@ -147,7 +147,7 @@ export default function EditNodeModal({
                         setIsEditSectionDropdownOpen(false);
                       }}
                     >
-                      -- Kosongkan Sektor --
+                      Kosongkan Sektor
                     </div>
                     {sections.map((sec) => (
                       <div 
