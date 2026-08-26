@@ -48,20 +48,19 @@ export default function ClientAdminPage({ adminId }: { adminId: string }) {
   const [profile, setProfile] = useState<{ company_name?: string; company_description?: string; company_logo?: string } | null>(null);
 
   useEffect(() => {
-    if (originalTheme.current === undefined) {
-      originalTheme.current = theme;
-    }
+    const initialTheme = theme;
     
-    if (theme !== 'dark') {
+    if (initialTheme && initialTheme !== 'dark') {
       setTheme('dark');
     }
 
     return () => {
-      if (originalTheme.current === 'light') {
-        setTheme('light');
+      if (initialTheme && initialTheme !== 'dark') {
+        setTheme(initialTheme);
       }
     };
-  }, [setTheme, theme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     async function fetchProfile() {
