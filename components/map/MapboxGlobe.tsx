@@ -24,12 +24,14 @@ export default function MapboxGlobe({
 }) {
   const { mapContainerRef } = useMapbox({ shouldAnimate });
   const fetchNodes = useMapStore((s) => s.fetchNodes);
+  const fetchBoundaries = useMapStore((s) => s.fetchBoundaries);
   const isLoading = useMapStore((s) => s.isLoading);
 
-  // Fetch the live nodes from Supabase when the map canvas mounts
+  // Fetch the live nodes and boundary polygons from Supabase when the map canvas mounts
   useEffect(() => {
     fetchNodes(adminId);
-  }, [fetchNodes, adminId]);
+    fetchBoundaries(adminId);
+  }, [fetchNodes, fetchBoundaries, adminId]);
 
   return (
     <>

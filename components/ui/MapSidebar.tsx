@@ -187,17 +187,6 @@ export default function MapSidebar({
 
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
 
-  // Extract unique locations from nodes to display in the log.
-  const uniqueLocations = useMemo(() => {
-    const locMap = new Map();
-    nodes.forEach(node => {
-      if (!locMap.has(node.locationName)) {
-        locMap.set(node.locationName, node);
-      }
-    });
-    return Array.from(locMap.values());
-  }, [nodes]);
-
   // Extract sections dynamically from nodes
   const dynamicSections = useMemo(() => {
     const sectionSet = new Set<string>();
@@ -207,18 +196,19 @@ export default function MapSidebar({
     return ['ALL', ...Array.from(sectionSet)];
   }, [nodes]);
 
-  const filteredLocations = useMemo(() => {
-    return uniqueLocations.filter(loc => {
-      const matchesSearch = loc.locationName.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter all photo nodes to display individually in the log
+  const filteredNodes = useMemo(() => {
+    return nodes.filter(node => {
+      const matchesSearch = node.locationName.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesSection = true;
       if (activeSection !== 'ALL') {
-        matchesSection = loc.section === activeSection;
+        matchesSection = node.section === activeSection;
       }
       
       return matchesSearch && matchesSection;
     });
-  }, [uniqueLocations, searchQuery, activeSection]);
+  }, [nodes, searchQuery, activeSection]);
 
   const handleLocationClick = (loc: any) => {
     if (!mapInstance) return;
@@ -563,7 +553,7 @@ export default function MapSidebar({
               </div>
             ))
           ) : (
-            filteredLocations.map((loc, idx) => (
+            filteredNodes.map((loc, idx) => (
               <div 
                 key={`${loc.id}-${idx}`}
                 onClick={() => handleLocationClick(loc)}
@@ -584,7 +574,7 @@ export default function MapSidebar({
             ))
           )}
 
-          {!isLoading && filteredLocations.length === 0 && (
+          {!isLoading && filteredNodes.length === 0 && (
             <div className="text-center text-slate-500 text-sm mt-8">
               {t('noNodes')}
             </div>

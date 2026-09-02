@@ -322,6 +322,16 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
 
         // Add click listener for polygon popup with ultra-clean styling & edit button
         map.on('click', fillLayerId, (e) => {
+          // Check if user actually clicked on a node point or cluster circle sitting on top of the polygon
+          const activePointLayers = [LAYER_UNCLUSTERED, LAYER_CLUSTERS, LAYER_CLUSTER_COUNT].filter(id => map.getLayer(id));
+          if (activePointLayers.length > 0) {
+            const nodeFeatures = map.queryRenderedFeatures(e.point, { layers: activePointLayers });
+            if (nodeFeatures && nodeFeatures.length > 0) {
+              // Node point or cluster circle clicked — skip boundary popup!
+              return;
+            }
+          }
+
           if (e.features && e.features[0]) {
             const props = e.features[0].properties || {};
             const cleanTitle = (boundary.name || 'Batas Wilayah').replace(/_/g, ' ');
@@ -330,51 +340,32 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
               .filter(([k]) => !k.startsWith('_') && typeof k === 'string' && k.toLowerCase() !== 'layer')
               .slice(0, 6)
               .map(([k, v]) => `
-                <div class="flex items-center justify-between text-[11px] py-1 border-b border-white/10 gap-2">
-                  <span class="text-zinc-400 font-medium truncate capitalize">${k.replace(/_/g, ' ')}</span>
-                  <span class="text-zinc-200 font-semibold truncate max-w-[120px] text-right">${v}</span>
+                <div class="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200 dark:border-white/10 gap-2">
+                  <span class="text-zinc-500 dark:text-zinc-400 font-medium truncate capitalize">${k.replace(/_/g, ' ')}</span>
+                  <span class="text-zinc-800 dark:text-zinc-200 font-semibold truncate max-w-[120px] text-right">${v}</span>
                 </div>
               `)
               .join('');
 
             const popupNode = document.createElement('div');
-            popupNode.className = 'flex flex-col gap-2.5 text-white max-w-[280px] p-1';
+            popupNode.className = 'flex flex-col gap-2.5 text-zinc-900 dark:text-white max-w-[280px] p-1';
             popupNode.innerHTML = `
               <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full shrink-0 shadow-md" style="background-color: ${boundary.color || '#06b6d4'}"></span>
-                <h4 class="font-bold text-sm text-white leading-tight break-words flex-1">${cleanTitle}</h4>
+                <h4 class="font-bold text-sm text-zinc-900 dark:text-white leading-tight break-words flex-1">${cleanTitle}</h4>
               </div>
 
-              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-bold w-fit">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-400 text-xs font-bold w-fit">
                 <span>Luas: ${boundary.total_area_ha?.toLocaleString('id-ID')} ha</span>
               </div>
 
               ${propsRows ? `<div class="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1">${propsRows}</div>` : ''}
-
-              <button 
-                id="edit-boundary-btn-${boundary.id}"
-                class="mt-2 w-full py-1.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                <span>Edit / Kelola Layer Ini</span>
-              </button>
             `;
 
-            const popup = new mapboxgl.Popup({ closeButton: true, maxWidth: '300px' })
+            new mapboxgl.Popup({ closeButton: true, maxWidth: '300px' })
               .setLngLat(e.lngLat)
               .setDOMContent(popupNode)
               .addTo(map);
-
-            // Wire click event to edit button
-            setTimeout(() => {
-              const editBtn = document.getElementById(`edit-boundary-btn-${boundary.id}`);
-              if (editBtn) {
-                editBtn.onclick = () => {
-                  popup.remove();
-                  window.dispatchEvent(new CustomEvent('open-manage-boundaries', { detail: { boundaryId: boundary.id } }));
-                };
-              }
-            }, 100);
           }
         });
       } else {

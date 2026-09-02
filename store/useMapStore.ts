@@ -208,6 +208,9 @@ export const useMapStore = create<MapState>((set, get) => ({
       }
     }
 
+    // Trigger boundary fetching in parallel so boundary layers load immediately alongside photo nodes
+    get().fetchBoundaries(targetAdminIdentifier);
+
     let fetchedData: any[] = [];
     let fetchError: any = null;
 
