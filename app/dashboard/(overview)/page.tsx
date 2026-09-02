@@ -9,6 +9,7 @@ import EditNodeModal from '@/components/admin/EditNodeModal';
 import DeleteNodeModal from '@/components/admin/DeleteNodeModal';
 import CompanyGrid from '@/components/admin/CompanyGrid';
 import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
+import UploadBoundaryModal from '@/components/admin/UploadBoundaryModal';
 import { useState } from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useNodeMutations } from '@/hooks/useNodeMutations';
@@ -16,6 +17,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export default function DashboardPage() {
   const [isManageSectionsModalOpen, setIsManageSectionsModalOpen] = useState(false);
+  const [isUploadBoundaryModalOpen, setIsUploadBoundaryModalOpen] = useState(false);
   const { t } = useLanguage();
   const {
     nodes,
@@ -158,18 +160,27 @@ export default function DashboardPage() {
         totalUsers={totalUsers}
       />
 
-      {/* ── SMART BATCH UPLOADER ── */}
+      {/* ── SMART BATCH UPLOADER & BOUNDARY UPLOADER ── */}
       {(userRole === 'user' || userRole === 'admin' || userRole === 'superadmin') && (
         <section>
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <h2 className="text-xl font-bold text-zinc-950 dark:text-white tracking-tight">{t('uploadPipeline')}</h2>
-            <button 
-              onClick={() => setIsManageSectionsModalOpen(true)}
-              className="flex items-center text-xs font-bold tracking-wider text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-[12px]"
-            >
-              <Layers className="w-4 h-4 mr-1.5" />
-              {t('manageSections')}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button 
+                onClick={() => setIsUploadBoundaryModalOpen(true)}
+                className="flex items-center text-xs font-bold tracking-wider text-white bg-cyan-600 hover:bg-cyan-700 transition-all px-4 py-2.5 rounded-[12px] shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
+              >
+                <Layers className="w-4 h-4 mr-1.5" />
+                + Upload Batas Wilayah
+              </button>
+              <button 
+                onClick={() => setIsManageSectionsModalOpen(true)}
+                className="flex items-center text-xs font-bold tracking-wider text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-[12px] cursor-pointer"
+              >
+                <Settings className="w-4 h-4 mr-1.5" />
+                {t('manageSections')}
+              </button>
+            </div>
           </div>
           <SmartUploader 
             onUploadComplete={fetchData} 
@@ -196,7 +207,13 @@ export default function DashboardPage() {
           openDeleteModal={mutations.openDeleteModal}
         />
 
-      {/* Modals (each modal internally manages its own Portal and mounting checks via Modal component) */}
+      {/* Modals */}
+      <UploadBoundaryModal
+        isOpen={isUploadBoundaryModalOpen}
+        onClose={() => setIsUploadBoundaryModalOpen(false)}
+        onSuccess={fetchData}
+        assignToGroupId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
+      />
       <ManageSectionsModal
         isOpen={isManageSectionsModalOpen}
         onClose={() => setIsManageSectionsModalOpen(false)}

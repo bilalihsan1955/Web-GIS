@@ -28,8 +28,11 @@ import {
  *
  * Returns a ref to attach to the container `<div>`.
  */
-export function useMapbox(options?: { shouldAnimate?: boolean }) {
+export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string }) {
   const shouldAnimate = options?.shouldAnimate ?? true;
+  const adminIdParam = options?.adminId;
+  const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
+  const targetCompanyId = adminIdParam || selectedCompanyId;
   const searchParams = useSearchParams();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -258,6 +261,98 @@ export function useMapbox(options?: { shouldAnimate?: boolean }) {
   const geoJSON = useMapStore((s) => s.geoJSON);
   const searchQuery = useMapStore((s) => s.searchQuery);
   const activeSection = useMapStore((s) => s.activeSection);
+  const boundaries = useMapStore((s) => s.boundaries);
+  const fetchBoundaries = useMapStore((s) => s.fetchBoundaries);
+
+  useEffect(() => {
+    fetchBoundaries(targetCompanyId);
+  }, [targetCompanyId, fetchBoundaries]);
+
+  // ── Sync Boundary Layers to Mapbox Map ───────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+    const map = mapRef.current;
+
+    boundaries.forEach((boundary) => {
+      const sourceId = `boundary-source-${boundary.id}`;
+      const fillLayerId = `boundary-fill-${boundary.id}`;
+      const lineLayerId = `boundary-line-${boundary.id}`;
+
+      let source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+
+      if (!source) {
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: boundary.geojson,
+        });
+
+        // Add fill layer behind unclustered points
+        const beforeLayerId = map.getLayer('unclustered-point') ? 'unclustered-point' : undefined;
+
+        map.addLayer(
+          {
+            id: fillLayerId,
+            type: 'fill',
+            source: sourceId,
+            paint: {
+              'fill-color': boundary.color || '#06b6d4',
+              'fill-opacity': boundary.is_visible ? boundary.opacity || 0.35 : 0,
+            },
+          },
+          beforeLayerId
+        );
+
+        // Add glowing outline stroke layer
+        map.addLayer(
+          {
+            id: lineLayerId,
+            type: 'line',
+            source: sourceId,
+            paint: {
+              'line-color': boundary.color || '#06b6d4',
+              'line-width': 2.5,
+              'line-opacity': boundary.is_visible ? 0.9 : 0,
+            },
+          },
+          beforeLayerId
+        );
+
+        // Add click listener for polygon popup
+        map.on('click', fillLayerId, (e) => {
+          if (e.features && e.features[0]) {
+            const props = e.features[0].properties || {};
+            const propsHtml = Object.entries(props)
+              .filter(([k]) => !k.startsWith('_') && typeof k === 'string')
+              .slice(0, 5)
+              .map(([k, v]) => `<div class="text-xs"><strong>${k}:</strong> ${v}</div>`)
+              .join('');
+
+            new mapboxgl.Popup({ closeButton: true })
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div class="p-2 text-zinc-900 dark:text-white">
+                  <h4 class="font-bold text-sm text-cyan-600 dark:text-cyan-400 mb-1">${boundary.name}</h4>
+                  <p class="text-xs text-zinc-500 mb-2">Luas: <strong>${boundary.total_area_ha?.toLocaleString('id-ID')} ha</strong></p>
+                  ${propsHtml}
+                </div>`
+              )
+              .addTo(map);
+          }
+        });
+      } else {
+        // Update existing layer data and visibility
+        source.setData(boundary.geojson);
+        if (map.getLayer(fillLayerId)) {
+          map.setPaintProperty(fillLayerId, 'fill-opacity', boundary.is_visible ? boundary.opacity || 0.35 : 0);
+          map.setPaintProperty(fillLayerId, 'fill-color', boundary.color || '#06b6d4');
+        }
+        if (map.getLayer(lineLayerId)) {
+          map.setPaintProperty(lineLayerId, 'line-opacity', boundary.is_visible ? 0.9 : 0);
+          map.setPaintProperty(lineLayerId, 'line-color', boundary.color || '#06b6d4');
+        }
+      }
+    });
+  }, [boundaries, isMapLoaded]);
 
   // ── Sync GeoJSON data to map source when it loads from Supabase or filters change ──
   useEffect(() => {

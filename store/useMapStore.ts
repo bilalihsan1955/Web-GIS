@@ -8,6 +8,19 @@ export interface CompanyProfile {
   iconUrl: string;
 }
 
+export interface BoundaryItem {
+  id: string;
+  name: string;
+  geojson: any;
+  color: string;
+  opacity: number;
+  total_area_ha: number;
+  feature_count: number;
+  is_visible: boolean;
+  created_by: string;
+  created_at: string;
+}
+
 interface MapState {
   isViewerOpen: boolean;
   activeNode: PhotoNode | null;
@@ -18,6 +31,12 @@ interface MapState {
   goToNextNode: () => void;
   goToPrevNode: () => void;
   fetchNodes: (adminId?: string) => Promise<void>;
+
+  // Boundaries
+  boundaries: BoundaryItem[];
+  fetchBoundaries: (companyId?: string) => Promise<void>;
+  toggleBoundaryVisibility: (id: string, isVisible: boolean) => Promise<void>;
+  deleteBoundary: (id: string) => Promise<void>;
 
   // Filtering state
   searchQuery: string;
@@ -92,6 +111,57 @@ export const useMapStore = create<MapState>((set, get) => ({
   nodes: [],
   geoJSON: null,
   isLoading: true,
+
+  boundaries: [],
+
+  fetchBoundaries: async (companyId?: string) => {
+    try {
+      const url = companyId && companyId !== 'all' 
+        ? `/api/dashboard/boundaries?companyId=${encodeURIComponent(companyId)}`
+        : '/api/dashboard/boundaries';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        set({ boundaries: data.boundaries || [] });
+      }
+    } catch (err) {
+      console.error('[MapStore] Error fetching boundaries:', err);
+    }
+  },
+
+  toggleBoundaryVisibility: async (id: string, isVisible: boolean) => {
+    // Optimistic update
+    set((state) => ({
+      boundaries: state.boundaries.map((b) =>
+        b.id === id ? { ...b, is_visible: isVisible } : b
+      ),
+    }));
+
+    try {
+      await fetch('/api/dashboard/boundaries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_visible: isVisible }),
+      });
+    } catch (err) {
+      console.error('[MapStore] Error toggling boundary visibility:', err);
+    }
+  },
+
+  deleteBoundary: async (id: string) => {
+    // Optimistic delete
+    set((state) => ({
+      boundaries: state.boundaries.filter((b) => b.id !== id),
+    }));
+
+    try {
+      await fetch(`/api/dashboard/boundaries?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.error('[MapStore] Error deleting boundary:', err);
+    }
+  },
 
   searchQuery: '',
   activeSection: 'ALL',

@@ -45,6 +45,10 @@ export default function MapSidebar({
   const currentUserGroupId = useDashboardStore((s) => s.currentUserGroupId);
   const userRole = userRoleFromStore || (typeof window !== 'undefined' ? localStorage.getItem('webgis_user_role') : null);
 
+  const boundaries = useMapStore((s) => s.boundaries);
+  const toggleBoundaryVisibility = useMapStore((s) => s.toggleBoundaryVisibility);
+  const deleteBoundary = useMapStore((s) => s.deleteBoundary);
+
   // Edit Profile Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isManageSectionsOpen, setIsManageSectionsOpen] = useState(false);
@@ -474,6 +478,63 @@ export default function MapSidebar({
             })}
           </div>
         </div>
+
+        {/* ── Boundaries Section ── */}
+        {boundaries.length > 0 && (
+          <div className={isDashboard ? "px-4 pt-1 pb-2" : "px-6 pt-2 pb-3"}>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[12px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                Batas Wilayah ({boundaries.length})
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {boundaries.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/60 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-sm transition-all"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                      style={{ backgroundColor: b.color || '#06b6d4' }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {b.name}
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {b.total_area_ha?.toLocaleString('id-ID')} ha ({b.feature_count} poligon)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => toggleBoundaryVisibility(b.id, !b.is_visible)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-colors ${
+                        b.is_visible
+                          ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30'
+                          : 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {b.is_visible ? 'Tampil' : 'Sembunyi'}
+                    </button>
+                    {isDashboard && (
+                      <button
+                        onClick={() => deleteBoundary(b.id)}
+                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                        title="Hapus Layer Batas"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Locations Log */}
         <div className={isDashboard ? "px-4 pt-1 pb-1.5" : "px-6 pt-2 pb-2"}>
