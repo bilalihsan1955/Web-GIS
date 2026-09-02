@@ -152,10 +152,14 @@ export default function UploadBoundaryModal({
             />
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Loader2 className="w-10 h-10 text-cyan-500 animate-spin mb-3" />
-                <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Memproses & mengonversi berkas spasial...</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Mengekstrak poligon & menghitung luas area</p>
+              <div className="flex flex-col items-center justify-center py-6 space-y-3 w-full animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 mb-1" />
+                <div className="h-4 bg-zinc-300 dark:bg-zinc-700 rounded-lg w-3/4 max-w-sm" />
+                <div className="h-3 bg-zinc-200 dark:bg-zinc-800 rounded-md w-1/2 max-w-xs" />
+                <div className="w-full max-w-md space-y-2 pt-2">
+                  <div className="h-10 bg-zinc-200 dark:bg-white/5 rounded-xl w-full" />
+                  <div className="h-10 bg-zinc-200 dark:bg-white/5 rounded-xl w-full" />
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-2">

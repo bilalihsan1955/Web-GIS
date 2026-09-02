@@ -1,6 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 
+// Helper to get authenticated user's role and allowed company group user IDs
+async function getUserGroupContext(supabase: any, adminSupabase: any, userId: string) {
+  const { data: roleData } = await adminSupabase
+    .from('user_roles')
+    .select('role, parent_admin_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const userRole = roleData?.role || 'user';
+  const userGroupId = roleData?.parent_admin_id || userId;
+
+  const { data: groupUsers } = await adminSupabase
+    .from('user_roles')
+    .select('user_id')
+    .or(`user_id.eq.${userGroupId},parent_admin_id.eq.${userGroupId}`);
+
+  const groupUserIds = (groupUsers || []).map((u: any) => u.user_id);
+  if (groupUserIds.length === 0) groupUserIds.push(userGroupId);
+
+  return { userRole, userGroupId, groupUserIds };
+}
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
@@ -12,39 +34,29 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
-
     const adminSupabase = createAdminClient();
 
-    // Check user role
-    const { data: roleData } = await adminSupabase
-      .from('user_roles')
-      .select('role, parent_admin_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = roleData?.role || 'user';
-    const userGroupId = roleData?.parent_admin_id || user.id;
+    const { userRole, userGroupId, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
 
     let targetAdminId = userGroupId;
     if (userRole === 'superadmin' && companyId && companyId !== 'all') {
       targetAdminId = companyId;
     }
 
-    // Get all user_ids in this company group
-    const { data: groupUsers } = await adminSupabase
-      .from('user_roles')
-      .select('user_id')
-      .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`);
-
-    const groupUserIds = (groupUsers || []).map(u => u.user_id);
-    if (groupUserIds.length === 0) groupUserIds.push(targetAdminId);
-
     let query = adminSupabase
       .from('company_boundaries')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (userRole !== 'superadmin' || (companyId && companyId !== 'all')) {
+    if (userRole === 'superadmin' && companyId && companyId !== 'all') {
+      const { data: targetGroupUsers } = await adminSupabase
+        .from('user_roles')
+        .select('user_id')
+        .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`);
+      const targetGroupUserIds = (targetGroupUsers || []).map((u: any) => u.user_id);
+      if (targetGroupUserIds.length === 0) targetGroupUserIds.push(targetAdminId);
+      query = query.in('created_by', targetGroupUserIds);
+    } else if (userRole !== 'superadmin') {
       query = query.in('created_by', groupUserIds);
     }
 
@@ -77,11 +89,17 @@ export async function POST(request: Request) {
     }
 
     const adminSupabase = createAdminClient();
+    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
 
-    // Determine target created_by user ID
+    // Enforce multi-tenant security on POST
     let createdByUserId = user.id;
-    if (assignToGroupId && assignToGroupId !== 'all') {
+    if (userRole === 'superadmin' && assignToGroupId && assignToGroupId !== 'all') {
       createdByUserId = assignToGroupId;
+    } else if (userRole !== 'superadmin') {
+      // Non-superadmins can ONLY assign boundaries to their own company group
+      if (assignToGroupId && !groupUserIds.includes(assignToGroupId)) {
+        return NextResponse.json({ error: 'Forbidden: Cannot create boundary for another company' }, { status: 403 });
+      }
     }
 
     const recordsToInsert = boundaries.map((b: any) => ({
@@ -127,6 +145,7 @@ export async function PUT(request: Request) {
     }
 
     const adminSupabase = createAdminClient();
+    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
 
     const updatePayload: any = {};
     if (typeof is_visible === 'boolean') updatePayload.is_visible = is_visible;
@@ -134,15 +153,23 @@ export async function PUT(request: Request) {
     if (typeof opacity === 'number') updatePayload.opacity = opacity;
     if (name) updatePayload.name = name;
 
-    const { data: updated, error } = await adminSupabase
+    let updateQuery = adminSupabase
       .from('company_boundaries')
       .update(updatePayload)
-      .eq('id', id)
-      .select('*')
-      .single();
+      .eq('id', id);
+
+    // Enforce multi-tenant security on PUT
+    if (userRole !== 'superadmin') {
+      updateQuery = updateQuery.in('created_by', groupUserIds);
+    }
+
+    const { data: updated, error } = await updateQuery.select('*').maybeSingle();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!updated) {
+      return NextResponse.json({ error: 'Boundary layer not found or access denied' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, boundary: updated });
@@ -168,11 +195,19 @@ export async function DELETE(request: Request) {
     }
 
     const adminSupabase = createAdminClient();
+    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
 
-    const { error } = await adminSupabase
+    let deleteQuery = adminSupabase
       .from('company_boundaries')
       .delete()
       .eq('id', id);
+
+    // Enforce multi-tenant security on DELETE
+    if (userRole !== 'superadmin') {
+      deleteQuery = deleteQuery.in('created_by', groupUserIds);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

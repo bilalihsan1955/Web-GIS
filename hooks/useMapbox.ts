@@ -280,15 +280,18 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
 
       let source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
 
+      // Ensure boundary layers are placed UNDER clusters and point markers
+      const beforeLayerId = map.getLayer('clusters') 
+        ? 'clusters' 
+        : (map.getLayer('unclustered-point') ? 'unclustered-point' : undefined);
+
       if (!source) {
         map.addSource(sourceId, {
           type: 'geojson',
           data: boundary.geojson,
         });
 
-        // Add fill layer behind unclustered points
-        const beforeLayerId = map.getLayer('unclustered-point') ? 'unclustered-point' : undefined;
-
+        // Add fill layer UNDER photo nodes
         map.addLayer(
           {
             id: fillLayerId,
@@ -302,7 +305,7 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
           beforeLayerId
         );
 
-        // Add glowing outline stroke layer
+        // Add glowing outline stroke layer UNDER photo nodes
         map.addLayer(
           {
             id: lineLayerId,
@@ -317,26 +320,61 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
           beforeLayerId
         );
 
-        // Add click listener for polygon popup
+        // Add click listener for polygon popup with ultra-clean styling & edit button
         map.on('click', fillLayerId, (e) => {
           if (e.features && e.features[0]) {
             const props = e.features[0].properties || {};
-            const propsHtml = Object.entries(props)
-              .filter(([k]) => !k.startsWith('_') && typeof k === 'string')
-              .slice(0, 5)
-              .map(([k, v]) => `<div class="text-xs"><strong>${k}:</strong> ${v}</div>`)
+            const cleanTitle = (boundary.name || 'Batas Wilayah').replace(/_/g, ' ');
+            
+            const propsRows = Object.entries(props)
+              .filter(([k]) => !k.startsWith('_') && typeof k === 'string' && k.toLowerCase() !== 'layer')
+              .slice(0, 6)
+              .map(([k, v]) => `
+                <div class="flex items-center justify-between text-[11px] py-1 border-b border-white/10 gap-2">
+                  <span class="text-zinc-400 font-medium truncate capitalize">${k.replace(/_/g, ' ')}</span>
+                  <span class="text-zinc-200 font-semibold truncate max-w-[120px] text-right">${v}</span>
+                </div>
+              `)
               .join('');
 
-            new mapboxgl.Popup({ closeButton: true })
+            const popupNode = document.createElement('div');
+            popupNode.className = 'flex flex-col gap-2.5 text-white max-w-[280px] p-1';
+            popupNode.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full shrink-0 shadow-md" style="background-color: ${boundary.color || '#06b6d4'}"></span>
+                <h4 class="font-bold text-sm text-white leading-tight break-words flex-1">${cleanTitle}</h4>
+              </div>
+
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-bold w-fit">
+                <span>Luas: ${boundary.total_area_ha?.toLocaleString('id-ID')} ha</span>
+              </div>
+
+              ${propsRows ? `<div class="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1">${propsRows}</div>` : ''}
+
+              <button 
+                id="edit-boundary-btn-${boundary.id}"
+                class="mt-2 w-full py-1.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span>Edit / Kelola Layer Ini</span>
+              </button>
+            `;
+
+            const popup = new mapboxgl.Popup({ closeButton: true, maxWidth: '300px' })
               .setLngLat(e.lngLat)
-              .setHTML(
-                `<div class="p-2 text-zinc-900 dark:text-white">
-                  <h4 class="font-bold text-sm text-cyan-600 dark:text-cyan-400 mb-1">${boundary.name}</h4>
-                  <p class="text-xs text-zinc-500 mb-2">Luas: <strong>${boundary.total_area_ha?.toLocaleString('id-ID')} ha</strong></p>
-                  ${propsHtml}
-                </div>`
-              )
+              .setDOMContent(popupNode)
               .addTo(map);
+
+            // Wire click event to edit button
+            setTimeout(() => {
+              const editBtn = document.getElementById(`edit-boundary-btn-${boundary.id}`);
+              if (editBtn) {
+                editBtn.onclick = () => {
+                  popup.remove();
+                  window.dispatchEvent(new CustomEvent('open-manage-boundaries', { detail: { boundaryId: boundary.id } }));
+                };
+              }
+            }, 100);
           }
         });
       } else {

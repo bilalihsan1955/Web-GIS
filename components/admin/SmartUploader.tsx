@@ -36,6 +36,11 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
     let query = supabase.from('company_sections').select('id, name').order('created_at', { ascending: true });
     if (assignToGroupId && assignToGroupId !== 'all') {
       query = query.eq('created_by', assignToGroupId);
+    } else {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user?.id) {
+        query = query.eq('created_by', sessionData.session.user.id);
+      }
     }
     const { data } = await query;
     if (data) setSections(data);
@@ -233,15 +238,25 @@ export default function SmartUploader({ onUploadComplete, assignToGroupId }: { o
         throw new Error('Authentication required. Your session has expired.');
       }
 
-      // Handle Location mapping atomically
+      // Handle Location mapping atomically (scoped strictly to company group)
       let locId = '';
-      const slug = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const ownerId = assignToGroupId && assignToGroupId !== 'all' ? assignToGroupId : sessionData.session.user.id;
+      const companySuffix = ownerId ? ownerId.slice(0, 8) : Date.now().toString();
+      const baseSlug = locationName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'loc';
+      const slug = `${baseSlug}-${companySuffix}`;
       
-      const { data: existingLoc, error: queryErr } = await supabase
+      let locQuery = supabase
         .from('locations')
         .select('id')
-        .eq('slug', slug)
-        .maybeSingle();
+        .eq('slug', slug);
+
+      if (assignToGroupId && assignToGroupId !== 'all') {
+        locQuery = locQuery.eq('created_by', assignToGroupId);
+      } else if (sessionData.session.user.id) {
+        locQuery = locQuery.eq('created_by', sessionData.session.user.id);
+      }
+
+      const { data: existingLoc, error: queryErr } = await locQuery.maybeSingle();
 
       if (queryErr) throw queryErr;
 

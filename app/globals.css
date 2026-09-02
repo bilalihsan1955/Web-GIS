@@ -239,3 +239,44 @@ body {
 .leaflet-control-zoom a:hover {
   background: rgba(0, 0, 0, 0.80) !important;
 }
+
+/* ── Mapbox Glassmorphic Popup Customization ────────────────────────── */
+.mapboxgl-popup-content {
+  background: rgba(9, 9, 11, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+  color: #ffffff !important;
+  max-width: 320px !important;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: rgba(9, 9, 11, 0.94) !important;
+}
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: rgba(9, 9, 11, 0.94) !important;
+}
+.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: rgba(9, 9, 11, 0.94) !important;
+}
+.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: rgba(9, 9, 11, 0.94) !important;
+}
+
+.mapboxgl-popup-close-button {
+  color: #a1a1aa !important;
+  padding: 4px 8px !important;
+  font-size: 18px !important;
+  top: 10px !important;
+  right: 10px !important;
+  border-radius: 10px !important;
+  transition: all 0.2s !important;
+}
+
+.mapboxgl-popup-close-button:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}

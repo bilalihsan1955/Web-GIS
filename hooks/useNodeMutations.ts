@@ -109,9 +109,14 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
         }
       }
 
-      // Handle Location mapping & update in-place
+      // Handle Location mapping & update in-place (scoped strictly to company group)
       let locId = selectedNode.location_id;
-      const slug = editLocationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData?.session?.user?.id;
+      const ownerId = selectedNode.created_by || currentUserId;
+      const companySuffix = ownerId ? ownerId.slice(0, 8) : Date.now().toString();
+      const baseSlug = editLocationName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'loc';
+      const slug = `${baseSlug}-${companySuffix}`;
 
       if (locId) {
         // Direct update on existing location record linked to this node
@@ -119,7 +124,7 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
           .from('locations')
           .update({
             name: editLocationName,
-            slug: slug || `loc-${Date.now()}`,
+            slug,
             description: editLocationDescription,
             section_id: editLocationSectionId || null
           })
@@ -130,11 +135,16 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
         }
       } else {
         // Fallback: search by slug or create a new location
-        const { data: existingLoc } = await supabase
+        let locQuery = supabase
           .from('locations')
           .select('id')
-          .eq('slug', slug)
-          .maybeSingle();
+          .eq('slug', slug);
+
+        if (ownerId) {
+          locQuery = locQuery.eq('created_by', ownerId);
+        }
+
+        const { data: existingLoc } = await locQuery.maybeSingle();
 
         if (existingLoc) {
           locId = existingLoc.id;
@@ -147,17 +157,14 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
             })
             .eq('id', locId);
         } else {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const currentUserId = sessionData?.session?.user?.id;
-
           const { data: newLoc, error: insertErr } = await supabase
             .from('locations')
             .insert({
               name: editLocationName,
-              slug: slug || `loc-${Date.now()}`,
+              slug,
               description: editLocationDescription,
               section_id: editLocationSectionId || null,
-              created_by: selectedNode.created_by || currentUserId
+              created_by: ownerId
             })
             .select('id')
             .single();
@@ -201,6 +208,28 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
     setDeleteError('');
     
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) throw new Error('Authentication required');
+
+      // Resolve company group IDs
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role, parent_admin_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const companyOwnerId = roleData?.parent_admin_id || user.id;
+      let groupUserIds: string[] = [user.id];
+      if (companyOwnerId) {
+        const { data: groupUsers } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
+        groupUserIds = (groupUsers || []).map(u => u.user_id);
+        if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
+      }
+
       if (nodeToDelete.image_url) {
         const res = await fetch('/api/upload/delete', {
           method: 'POST',
@@ -213,20 +242,38 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
         }
       }
 
-      const { error: nodeError } = await supabase
+      // Delete node strictly scoped to groupUserIds
+      let deleteNodeQuery = supabase
         .from('spatial_nodes')
         .delete()
         .eq('id', nodeToDelete.id);
-        
+
+      if (roleData?.role !== 'superadmin') {
+        deleteNodeQuery = deleteNodeQuery.in('created_by', groupUserIds);
+      }
+
+      const { error: nodeError } = await deleteNodeQuery;
       if (nodeError) throw nodeError;
 
       if (nodeToDelete.location_id) {
-        const { error: locError } = await supabase
-          .from('locations')
-          .delete()
-          .eq('id', nodeToDelete.location_id);
-          
-        if (locError) throw locError;
+        // Only delete location record if no other nodes reference it
+        const { count } = await supabase
+          .from('spatial_nodes')
+          .select('id', { count: 'exact', head: true })
+          .eq('location_id', nodeToDelete.location_id);
+
+        if (!count || count === 0) {
+          let deleteLocQuery = supabase
+            .from('locations')
+            .delete()
+            .eq('id', nodeToDelete.location_id);
+
+          if (roleData?.role !== 'superadmin') {
+            deleteLocQuery = deleteLocQuery.in('created_by', groupUserIds);
+          }
+
+          await deleteLocQuery;
+        }
       }
 
       setIsDeleteModalOpen(false);

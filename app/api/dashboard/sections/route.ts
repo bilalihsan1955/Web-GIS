@@ -67,10 +67,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Section ID is required' }, { status: 400 });
     }
 
-    // Check permissions
+    // Check permissions & group scoping
     const { data: roleData } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, parent_admin_id')
       .eq('user_id', user.id)
       .single();
 
@@ -78,11 +78,24 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ error: 'Only admins can delete sections' }, { status: 403 });
     }
 
+    const companyOwnerId = roleData.parent_admin_id || user.id;
+    let groupUserIds: string[] = [user.id];
+    if (companyOwnerId) {
+      const { data: groupUsers } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
+      groupUserIds = (groupUsers || []).map(u => u.user_id);
+      if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
+    }
+
     // Delete section
-    const { error } = await supabase
-      .from('company_sections')
-      .delete()
-      .eq('id', id);
+    let deleteQuery = supabase.from('company_sections').delete().eq('id', id);
+    if (roleData.role !== 'superadmin') {
+      deleteQuery = deleteQuery.in('created_by', groupUserIds);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -113,7 +126,7 @@ export async function PATCH(req: Request) {
     // Check permissions
     const { data: roleData } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, parent_admin_id')
       .eq('user_id', user.id)
       .single();
 
@@ -121,11 +134,24 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: 'Only admins can update sections' }, { status: 403 });
     }
 
-    // Update section (RLS applies)
-    const { error } = await supabase
-      .from('company_sections')
-      .update({ name })
-      .eq('id', id);
+    const companyOwnerId = roleData.parent_admin_id || user.id;
+    let groupUserIds: string[] = [user.id];
+    if (companyOwnerId) {
+      const { data: groupUsers } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
+      groupUserIds = (groupUsers || []).map(u => u.user_id);
+      if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
+    }
+
+    // Update section
+    let updateQuery = supabase.from('company_sections').update({ name }).eq('id', id);
+    if (roleData.role !== 'superadmin') {
+      updateQuery = updateQuery.in('created_by', groupUserIds);
+    }
+
+    const { error } = await updateQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

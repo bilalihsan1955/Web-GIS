@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { type PhotoNode } from '@/lib/data';
 import { createClient } from '@/utils/supabase/client';
+import { useDashboardStore } from '@/store/useDashboardStore';
 
 export interface CompanyProfile {
   name: string;
@@ -197,18 +198,28 @@ export const useMapStore = create<MapState>((set, get) => ({
     set({ isLoading: true });
     const supabase = createClient();
 
+    let targetAdminIdentifier = adminId;
+    if (!targetAdminIdentifier && typeof window !== 'undefined') {
+      const { userRole, selectedCompanyId, currentUserGroupId } = useDashboardStore.getState();
+      if (userRole === 'superadmin' && selectedCompanyId && selectedCompanyId !== 'all') {
+        targetAdminIdentifier = selectedCompanyId;
+      } else if (userRole && userRole !== 'superadmin') {
+        targetAdminIdentifier = currentUserGroupId || undefined;
+      }
+    }
+
     let fetchedData: any[] = [];
     let fetchError: any = null;
 
-    if (adminId) {
+    if (targetAdminIdentifier && targetAdminIdentifier !== 'all') {
       // Fetch via RPC for specific admin group using the slug (or UUID if slug doesn't exist)
       const { data, error } = await supabase.rpc('get_nodes_for_admin_group', {
-        admin_identifier: adminId,
+        admin_identifier: targetAdminIdentifier,
       });
       fetchedData = data || [];
       fetchError = error;
     } else {
-      // Query all published spatial_nodes (public default or authenticated view)
+      // Query all published spatial_nodes (ONLY for Superadmin in Global mode)
       const { data, error } = await supabase
         .from('spatial_nodes')
         .select(`
@@ -237,8 +248,8 @@ export const useMapStore = create<MapState>((set, get) => ({
 
     const mappedNodes: PhotoNode[] = fetchedData.map((item: any) => {
       // Handle difference between direct table select and RPC return formats
-      const locationName = adminId ? item.location_name : (item.locations?.name || 'Unknown Location');
-      const locationDesc = adminId ? item.location_description : (item.locations?.description || '');
+      const locationName = targetAdminIdentifier ? item.location_name : (item.locations?.name || 'Unknown Location');
+      const locationDesc = targetAdminIdentifier ? item.location_description : (item.locations?.description || '');
 
       let lng = item.longitude;
       let lat = item.latitude;

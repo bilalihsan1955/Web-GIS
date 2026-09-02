@@ -10,7 +10,8 @@ import DeleteNodeModal from '@/components/admin/DeleteNodeModal';
 import CompanyGrid from '@/components/admin/CompanyGrid';
 import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
 import UploadBoundaryModal from '@/components/admin/UploadBoundaryModal';
-import { useState } from 'react';
+import ManageBoundariesModal from '@/components/admin/ManageBoundariesModal';
+import { useState, useEffect } from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useNodeMutations } from '@/hooks/useNodeMutations';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -18,6 +19,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 export default function DashboardPage() {
   const [isManageSectionsModalOpen, setIsManageSectionsModalOpen] = useState(false);
   const [isUploadBoundaryModalOpen, setIsUploadBoundaryModalOpen] = useState(false);
+  const [isManageBoundariesModalOpen, setIsManageBoundariesModalOpen] = useState(false);
   const { t } = useLanguage();
   const {
     nodes,
@@ -52,6 +54,12 @@ export default function DashboardPage() {
     setLocations,
     setTotalNodes
   });
+
+  useEffect(() => {
+    const handleOpenBoundaries = () => setIsManageBoundariesModalOpen(true);
+    window.addEventListener('open-manage-boundaries', handleOpenBoundaries);
+    return () => window.removeEventListener('open-manage-boundaries', handleOpenBoundaries);
+  }, []);
 
   // Prevent hydration mismatch by returning a neutral placeholder during SSR and initial hydration
   if (!isMounted) {
@@ -174,6 +182,13 @@ export default function DashboardPage() {
                 + Upload Batas Wilayah
               </button>
               <button 
+                onClick={() => setIsManageBoundariesModalOpen(true)}
+                className="flex items-center text-xs font-bold tracking-wider text-cyan-700 dark:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all px-4 py-2.5 rounded-[12px] cursor-pointer"
+              >
+                <Layers className="w-4 h-4 mr-1.5" />
+                Kelola Batas Wilayah
+              </button>
+              <button 
                 onClick={() => setIsManageSectionsModalOpen(true)}
                 className="flex items-center text-xs font-bold tracking-wider text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-[12px] cursor-pointer"
               >
@@ -213,6 +228,11 @@ export default function DashboardPage() {
         onClose={() => setIsUploadBoundaryModalOpen(false)}
         onSuccess={fetchData}
         assignToGroupId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
+      />
+      <ManageBoundariesModal
+        isOpen={isManageBoundariesModalOpen}
+        onClose={() => setIsManageBoundariesModalOpen(false)}
+        onRefresh={fetchData}
       />
       <ManageSectionsModal
         isOpen={isManageSectionsModalOpen}

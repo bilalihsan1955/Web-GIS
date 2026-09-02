@@ -37,152 +37,158 @@ export function useDashboardData() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    
-    // Phase 1: Session and Role Check
-    const { data: { user } } = await supabase.auth.getUser();
-    let currentUserRole = cachedRole || 'user';
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('webgis_user_role');
-      if (stored) currentUserRole = stored;
-    }
-    let localUserGroupId = '';
-    
-    if (user) {
-      setCurrentUser(user);
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role, parent_admin_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (roleData) {
-        currentUserRole = roleData.role;
-        setUserRole(roleData.role);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('webgis_user_role', roleData.role);
-        }
-        localUserGroupId = roleData.parent_admin_id || user.id;
-        setCurrentUserGroupId(localUserGroupId);
-        setCurrentUserGroupIdStore(localUserGroupId);
-      } else {
-        localUserGroupId = user.id;
-        setCurrentUserGroupId(localUserGroupId);
-        setCurrentUserGroupIdStore(localUserGroupId);
+    try {
+      // Phase 1: Session and Role Check safely with error catch
+      const authRes = await supabase.auth.getUser().catch((err) => {
+        console.warn('[useDashboardData] Supabase auth check warning:', err);
+        return { data: { user: null } };
+      });
+      const user = authRes?.data?.user ?? null;
+
+      let currentUserRole = cachedRole || 'user';
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('webgis_user_role');
+        if (stored) currentUserRole = stored;
       }
-      setIsRoleLoaded(true);
-    } else {
-      setIsRoleLoaded(true);
-    }
-
-    let targetAdminId = localUserGroupId;
-    if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
-      targetAdminId = selectedCompanyId;
-    }
-
-    // Phase 2: OPTIMIZATION - Parallel fetching of independent queries (admins group, company users, exact user count)
-    const adminsPromise = currentUserRole === 'superadmin'
-      ? supabase
+      let localUserGroupId = '';
+      
+      if (user) {
+        setCurrentUser(user);
+        const { data: roleData } = await supabase
           .from('user_roles')
-          .select('user_id, company_name, email, company_logo, company_slug')
-          .eq('role', 'admin') // strictly only Admins are considered Companies
-          .is('parent_admin_id', null) // Only fetch true Company Owners, not Co-Admins
-          .order('company_name', { ascending: true })
-      : Promise.resolve({ data: null });
-
-    const companyUsersPromise = (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all')
-      ? supabase
-          .from('user_roles')
-          .select('user_id')
-          .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`)
-      : Promise.resolve({ data: null });
-
-    const usersCountPromise = supabase
-      .from('user_roles')
-      .select('*', { count: 'exact', head: true });
-
-    // OPTIMIZATION: Diubah ke Promise.all untuk paralel fetching tanpa mengubah struktur data
-    const [adminsRes, companyUsersRes, usersCountRes] = await Promise.all([
-      adminsPromise,
-      companyUsersPromise,
-      usersCountPromise,
-    ]);
-
-    if (adminsRes.data) {
-      setAdminGroups(adminsRes.data);
-    }
-
-    let allowedCreatorIds: string[] | null = null;
-    if (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all') {
-      if (companyUsersRes.data) {
-        allowedCreatorIds = companyUsersRes.data.map(u => u.user_id);
-      } else {
-        allowedCreatorIds = [targetAdminId]; // fallback
-      }
-    }
-
-    // Phase 3: OPTIMIZATION - Parallel fetching of spatial_nodes and totalUsers calculation
-    // Preserve exact valid base columns of spatial_nodes along with locations & creator JOINs
-    let nodesQuery = supabase
-      .from('spatial_nodes')
-      .select(`
-        *,
-        locations(name, description, section_id, company_sections(name)),
-        creator:user_roles!fk_spatial_nodes_created_by_user_roles (
-          email,
-          role,
-          parent_admin_id,
-          parent:user_roles!parent_admin_id (
-            email
-          )
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (allowedCreatorIds) {
-      nodesQuery = nodesQuery.in('created_by', allowedCreatorIds);
-    }
-
-    const fetchTotalUsersTask = async () => {
-      const { count: usersCount } = usersCountRes;
-      try {
-        const res = await fetch('/api/dashboard/users');
-        const apiData = await res.json();
-        if (apiData.users) {
-          let filteredUsers = apiData.users;
-          if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
-            filteredUsers = apiData.users.filter((u: any) => 
-              u.parent_admin_id === selectedCompanyId || u.id === selectedCompanyId
-            );
+          .select('role, parent_admin_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (roleData) {
+          currentUserRole = roleData.role;
+          setUserRole(roleData.role);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('webgis_user_role', roleData.role);
           }
-          setTotalUsers(filteredUsers.length);
-        } else if (usersCount !== null) {
-          setTotalUsers(usersCount);
+          localUserGroupId = roleData.parent_admin_id || user.id;
+          setCurrentUserGroupId(localUserGroupId);
+          setCurrentUserGroupIdStore(localUserGroupId);
+        } else {
+          localUserGroupId = user.id;
+          setCurrentUserGroupId(localUserGroupId);
+          setCurrentUserGroupIdStore(localUserGroupId);
         }
-      } catch (e) {
-        if (usersCount !== null) setTotalUsers(usersCount);
+        setIsRoleLoaded(true);
+      } else {
+        setIsRoleLoaded(true);
       }
-    };
 
-    // OPTIMIZATION: Paralel execute nodes query & totalUsers resolution
-    const [nodesRes] = await Promise.all([
-      nodesQuery,
-      fetchTotalUsersTask()
-    ]);
+      let targetAdminId = localUserGroupId;
+      if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
+        targetAdminId = selectedCompanyId;
+      }
 
-    const { data: spatialNodes, error: spatialError } = nodesRes;
+      // Phase 2: OPTIMIZATION - Parallel fetching of independent queries
+      const adminsPromise = currentUserRole === 'superadmin'
+        ? supabase
+            .from('user_roles')
+            .select('user_id, company_name, email, company_logo, company_slug')
+            .eq('role', 'admin') // strictly only Admins are considered Companies
+            .is('parent_admin_id', null) // Only fetch true Company Owners, not Co-Admins
+            .order('company_name', { ascending: true })
+        : Promise.resolve({ data: null });
 
-    if (spatialError) {
-      console.error('[useDashboardData] Failed to fetch spatial nodes:', spatialError.message || spatialError);
+      const companyUsersPromise = (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all')
+        ? supabase
+            .from('user_roles')
+            .select('user_id')
+            .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`)
+        : Promise.resolve({ data: null });
+
+      const usersCountPromise = supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true });
+
+      const [adminsRes, companyUsersRes, usersCountRes] = await Promise.all([
+        adminsPromise,
+        companyUsersPromise,
+        usersCountPromise,
+      ]);
+
+      if (adminsRes.data) {
+        setAdminGroups(adminsRes.data);
+      }
+
+      let allowedCreatorIds: string[] | null = null;
+      if (currentUserRole !== 'superadmin' || selectedCompanyId !== 'all') {
+        if (companyUsersRes.data) {
+          allowedCreatorIds = companyUsersRes.data.map(u => u.user_id);
+        } else {
+          allowedCreatorIds = [targetAdminId]; // fallback
+        }
+      }
+
+      // Phase 3: Parallel fetching of spatial_nodes and totalUsers calculation
+      let nodesQuery = supabase
+        .from('spatial_nodes')
+        .select(`
+          *,
+          locations(name, description, section_id, company_sections(name)),
+          creator:user_roles!fk_spatial_nodes_created_by_user_roles (
+            email,
+            role,
+            parent_admin_id,
+            parent:user_roles!parent_admin_id (
+              email
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (allowedCreatorIds) {
+        nodesQuery = nodesQuery.in('created_by', allowedCreatorIds);
+      }
+
+      const fetchTotalUsersTask = async () => {
+        const { count: usersCount } = usersCountRes;
+        try {
+          const res = await fetch('/api/dashboard/users');
+          const apiData = await res.json();
+          if (apiData.users) {
+            let filteredUsers = apiData.users;
+            if (currentUserRole === 'superadmin' && selectedCompanyId !== 'all') {
+              filteredUsers = apiData.users.filter((u: any) => 
+                u.parent_admin_id === selectedCompanyId || u.id === selectedCompanyId
+              );
+            }
+            setTotalUsers(filteredUsers.length);
+          } else if (usersCount !== null) {
+            setTotalUsers(usersCount);
+          }
+        } catch (e) {
+          if (usersCount !== null) setTotalUsers(usersCount);
+        }
+      };
+
+      const [nodesRes] = await Promise.all([
+        nodesQuery,
+        fetchTotalUsersTask()
+      ]);
+
+      const { data: spatialNodes, error: spatialError } = nodesRes;
+
+      if (spatialError) {
+        console.error('[useDashboardData] Failed to fetch spatial nodes:', spatialError.message || spatialError);
+      }
+
+      if (spatialNodes) {
+        setNodes(spatialNodes);
+        setTotalNodes(spatialNodes.length);
+        const publishedCount = spatialNodes.filter((n: any) => n.is_published).length;
+        setTotalLocations(publishedCount);
+      }
+    } catch (err) {
+      console.warn('[useDashboardData] Error in fetchData:', err);
+      setIsRoleLoaded(true);
+    } finally {
+      setLoading(false);
     }
-
-    if (spatialNodes) {
-      // Data is already filtered by Supabase
-      setNodes(spatialNodes);
-      setTotalNodes(spatialNodes.length);
-      const publishedCount = spatialNodes.filter((n: any) => n.is_published).length;
-      setTotalLocations(publishedCount);
-    }
-    setLoading(false);
-  }, [supabase, selectedCompanyId]);
+  }, [supabase, selectedCompanyId, cachedRole, setUserRole, setCurrentUserGroupIdStore]);
 
   useEffect(() => {
     setIsMounted(true);
