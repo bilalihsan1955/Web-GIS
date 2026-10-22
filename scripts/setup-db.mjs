@@ -1,21 +1,27 @@
 // scripts/setup-db.mjs
 // Automated DB Migration & Seeding for Standalone PostgreSQL
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-// Load .env natively in Node 20+ if present (gracefully ignored in Docker where env vars are already passed)
-try {
-  if (typeof process.loadEnvFile === 'function') {
-    process.loadEnvFile();
-  }
-} catch {
-  // Gracefully ignored if .env file is not present or already in environment
-}
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '..');
+
+// Load .env.production or .env natively in Node 20+ if present
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    const prodEnv = resolve(rootDir, '.env.production');
+    const localEnv = resolve(rootDir, '.env');
+    if (existsSync(prodEnv)) {
+      process.loadEnvFile(prodEnv);
+    } else if (existsSync(localEnv)) {
+      process.loadEnvFile(localEnv);
+    }
+  }
+} catch {
+  // Gracefully ignored if env file is not present or already in environment
+}
 
 const connectionString =
   process.env.DATABASE_URL ||
