@@ -1,0 +1,60 @@
+# ==============================================================================
+# Web-GIS Production Docker Compose
+# High-security architecture: PostgreSQL isolated from public internet,
+# Next.js bound strictly to 127.0.0.1:3000 (accessible only via Nginx Reverse Proxy)
+# ==============================================================================
+
+services:
+  # 1. Isolated PostgreSQL Database Container
+  webgis-db:
+    image: postgres:16-alpine
+    container_name: webgis-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-webgis}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - webgis-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-webgis}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Security: Port 5432 is deliberately NOT published to the host/internet
+
+  # 2. Next.js 16 Standalone Application Container
+  webgis-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webgis-app
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      # Security: Strictly bound to localhost (127.0.0.1) so only Nginx can forward traffic
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # Persistent Volume for uploaded 360° panoramas and geojson files
+      - uploads_data:/app/public/uploads
+    depends_on:
+      webgis-db:
+        condition: service_healthy
+    networks:
+      - webgis-net
+
+volumes:
+  pgdata:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  webgis-net:
+    driver: bridge
