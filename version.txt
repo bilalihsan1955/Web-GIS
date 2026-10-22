@@ -1,0 +1,1 @@
+1.2.1 - Complete Standalone PostgreSQL Migration, Supabase Decoupling, User Management Hook Decomposition & Zero "Failed to Fetch"

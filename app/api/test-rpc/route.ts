@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { query } from '@/lib/db';
 
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
   if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Testing endpoints are disabled in production' }, { status: 403 });
+    return NextResponse.json({ error: 'Endpoint pengujian dinonaktifkan di mode produksi.' }, { status: 403 });
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  
-  const { data: nodes, error } = await supabase.rpc('get_nodes_for_admin_group', {
-    admin_identifier: 'admin-um'
-  });
+  const result = await query<{ count: string }>(`SELECT COUNT(*) as count FROM spatial_nodes`);
 
-  return NextResponse.json({ 
-    count: nodes?.length,
-    error,
-    nodes 
+  return NextResponse.json({
+    status: 'ok',
+    total_spatial_nodes: parseInt(result.rows[0]?.count || '0', 10),
   });
 }

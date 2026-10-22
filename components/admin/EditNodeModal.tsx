@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { X, Loader2, CheckCircle2, UploadCloud, ChevronDown, Edit } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import Modal from '@/components/ui/Modal';
@@ -51,17 +50,23 @@ export default function EditNodeModal({
 }: EditNodeModalProps) {
   const { t } = useLanguage();
   const [isEditSectionDropdownOpen, setIsEditSectionDropdownOpen] = useState(false);
-  const supabase = createClient();
-  const [sections, setSections] = useState<{id: string, name: string}[]>([]);
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
 
   const fetchSections = useCallback(async () => {
-    let query = supabase.from('company_sections').select('id, name').order('created_at', { ascending: true });
-    if (adminId && adminId !== 'all') {
-      query = query.eq('created_by', adminId);
+    try {
+      const url =
+        adminId && adminId !== 'all'
+          ? `/api/dashboard/sections?companyId=${encodeURIComponent(adminId)}`
+          : '/api/dashboard/sections';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sections) setSections(data.sections);
+      }
+    } catch (err) {
+      console.error('[EditNodeModal] Error fetching sections:', err);
     }
-    const { data } = await query;
-    if (data) setSections(data);
-  }, [adminId, supabase]);
+  }, [adminId]);
 
   useEffect(() => {
     if (isOpen) {

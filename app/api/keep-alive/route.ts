@@ -1,47 +1,27 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/utils/supabase/server';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const startTime = Date.now();
   try {
-    const supabase = createAdminClient();
-
-    // Perform a lightweight read query to register activity on Supabase PostgreSQL DB
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      console.error('[Keep-Alive] Supabase Query Error:', error.message);
-      return NextResponse.json(
-        {
-          status: 'error',
-          message: `Supabase query failed: ${error.message}`,
-          timestamp: new Date().toISOString(),
-          latencyMs: Date.now() - startTime,
-        },
-        { status: 500 }
-      );
-    }
+    // Perform a lightweight healthcheck query on Docker PostgreSQL Pool
+    await query('SELECT 1');
 
     const latencyMs = Date.now() - startTime;
-
     return NextResponse.json({
       status: 'ok',
-      message: 'Supabase keep-alive ping successful. Database activity registered.',
+      message: 'Standalone PostgreSQL connection pool is healthy and responsive.',
       timestamp: new Date().toISOString(),
       latencyMs,
-      recordsFound: data ? data.length : 0,
     });
-  } catch (err: any) {
-    console.error('[Keep-Alive] Unexpected Error:', err.message);
+  } catch (error: any) {
+    console.error('[Healthcheck Error]:', error.message);
     return NextResponse.json(
       {
         status: 'error',
-        message: err.message || 'Unexpected server error during keep-alive ping',
+        message: `Database connection failed: ${error.message}`,
         timestamp: new Date().toISOString(),
         latencyMs: Date.now() - startTime,
       },

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { type PhotoNode } from '@/lib/data';
-import { createClient } from '@/utils/supabase/client';
 import { useDashboardStore } from '@/store/useDashboardStore';
 
 export interface CompanyProfile {
@@ -118,8 +117,8 @@ export const useMapStore = create<MapState>((set, get) => ({
   fetchBoundaries: async (companyId?: string) => {
     try {
       const url = companyId && companyId !== 'all' 
-        ? `/api/dashboard/boundaries?companyId=${encodeURIComponent(companyId)}`
-        : '/api/dashboard/boundaries';
+        ? `/api/dashboard/boundaries?include_geojson=true&companyId=${encodeURIComponent(companyId)}`
+        : '/api/dashboard/boundaries?include_geojson=true';
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -196,7 +195,6 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   fetchNodes: async (adminId) => {
     set({ isLoading: true });
-    const supabase = createClient();
 
     let targetAdminIdentifier = adminId;
     if (!targetAdminIdentifier && typeof window !== 'undefined') {
@@ -212,39 +210,20 @@ export const useMapStore = create<MapState>((set, get) => ({
     get().fetchBoundaries(targetAdminIdentifier);
 
     let fetchedData: any[] = [];
-    let fetchError: any = null;
 
-    if (targetAdminIdentifier && targetAdminIdentifier !== 'all') {
-      // Fetch via RPC for specific admin group using the slug (or UUID if slug doesn't exist)
-      const { data, error } = await supabase.rpc('get_nodes_for_admin_group', {
-        admin_identifier: targetAdminIdentifier,
-      });
-      fetchedData = data || [];
-      fetchError = error;
-    } else {
-      // Query all published spatial_nodes (ONLY for Superadmin in Global mode)
-      const { data, error } = await supabase
-        .from('spatial_nodes')
-        .select(`
-          id,
-          image_url,
-          longitude,
-          latitude,
-          capture_date,
-          locations (
-            name,
-            description
-          )
-        `)
-        .order('created_at', { ascending: false });
-      fetchedData = data || [];
-      fetchError = error;
-    }
-
-    if (fetchError) {
-      console.error('[MapStore] Failed to fetch spatial nodes:', fetchError);
-      set({ isLoading: false });
-      return;
+    try {
+      const url = targetAdminIdentifier
+        ? `/api/public/nodes?adminId=${encodeURIComponent(targetAdminIdentifier)}`
+        : '/api/public/nodes';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        fetchedData = data.nodes || [];
+      } else {
+        console.error('[MapStore] Failed to fetch spatial nodes from API');
+      }
+    } catch (err) {
+      console.error('[MapStore] Error fetching spatial nodes:', err);
     }
 
     const seenCoords = new Set<string>();

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
 import { Loader2, Share2, Check, Info, Building2, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -31,7 +30,6 @@ export default function PreviewPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const supabase = createClient();
   const mapInstance = useDashboardStore((s) => s.mapInstance);
 
   const [slug, setSlug] = useState('');
@@ -45,15 +43,16 @@ export default function PreviewPage() {
 
   useEffect(() => {
     async function getUserAndProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      // Default fallback in case the API call fails
-      if (user) {
-        setSlug(user.id);
-      }
-
       try {
+        const meRes = await fetch('/api/auth/me');
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.user) {
+            setUser(meData.user);
+            setSlug(meData.user.companySlug || meData.user.id);
+          }
+        }
+
         const profileRes = await fetch('/api/dashboard/company-profile', { cache: 'no-store' });
         if (profileRes.ok) {
           const profileData = await profileRes.json();
@@ -62,18 +61,18 @@ export default function PreviewPage() {
             if (profileData.profile.company_slug) {
               setSlug(profileData.profile.company_slug);
             } else if (profileData.admin_id) {
-              setSlug(profileData.admin_id); // Fallback to admin_id if no slug is present
+              setSlug(profileData.admin_id);
             }
           }
         }
       } catch (err) {
-        console.error("Failed to fetch profile", err);
+        console.error('Failed to fetch profile:', err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     }
     getUserAndProfile();
-  }, [supabase]);
+  }, []);
 
   const handleCopyLink = () => {
     if (!user || !activeAdminId) return;

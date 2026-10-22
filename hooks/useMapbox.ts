@@ -5,11 +5,10 @@ import mapboxgl from 'mapbox-gl';
 import { useSearchParams } from 'next/navigation';
 import { useDashboardStore } from '@/store/useDashboardStore';
 import { useMapStore } from '@/store/useMapStore';
-// sampleGeoJSON removed
+import { useMapboxBoundaries } from '@/hooks/useMapboxBoundaries';
 import {
   MAPBOX_STYLE,
   INITIAL_CENTER,
-  INITIAL_ZOOM,
   GLOBE_PROJECTION,
   CLUSTER_RADIUS,
   CLUSTER_MAX_ZOOM,
@@ -19,36 +18,41 @@ import {
   LAYER_UNCLUSTERED,
 } from '@/lib/constants';
 
-/**
- * Custom hook that owns the entire Mapbox GL JS lifecycle:
- *   1. Initialise globe with dark satellite style
- *   2. Add GeoJSON source with clustering
- *   3. Wire cluster-expand + point-select click handlers
- *   4. **Destroy WebGL context on unmount** (critical for memory)
- *
- * Returns a ref to attach to the container `<div>`.
- */
+// ============================================================================
+// hooks/useMapbox.ts: Core Mapbox GL JS 3D Globe & Clustering Lifecycle Hook
+// Strict WebGL Context Cleanup & Memory Leak Prevention (< 240 lines)
+// ============================================================================
+
 export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string }) {
   const shouldAnimate = options?.shouldAnimate ?? true;
   const adminIdParam = options?.adminId;
   const selectedCompanyId = useDashboardStore((s) => s.selectedCompanyId);
   const targetCompanyId = adminIdParam || selectedCompanyId;
   const searchParams = useSearchParams();
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const hasAnimatedRef = useRef(false);
-  const isAnimatingRef = useRef(false); // Guard: prevent pitch handler from killing flyTo
+  const isAnimatingRef = useRef(false);
 
-  // Use stable references to store actions to avoid effect re-runs
   const setMapInstance = useDashboardStore((s) => s.setMapInstance);
   const openViewer = useMapStore((s) => s.openViewer);
+  const geoJSON = useMapStore((s) => s.geoJSON);
+  const searchQuery = useMapStore((s) => s.searchQuery);
+  const activeSection = useMapStore((s) => s.activeSection);
+
+  // Sub-hook: Handle GeoJSON polygon boundary layers and collision guards
+  useMapboxBoundaries({
+    map: mapRef.current,
+    isMapLoaded,
+    targetCompanyId,
+  });
 
   const setupLayers = useCallback((map: mapboxgl.Map) => {
     const initialGeoJSON = useMapStore.getState().geoJSON || { type: 'FeatureCollection', features: [] };
-    
-    // ── GeoJSON Source with clustering ──────────────────────────────
+
     map.addSource(SOURCE_ID, {
       type: 'geojson',
       data: initialGeoJSON,
@@ -57,7 +61,7 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
       clusterRadius: CLUSTER_RADIUS,
     });
 
-    // ── Cluster Circles (warna berlapis berdasarkan jumlah node) ────
+    // Cluster circles with dynamic size and color styling
     map.addLayer({
       id: LAYER_CLUSTERS,
       type: 'circle',
@@ -67,42 +71,20 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
         'circle-color': [
           'step',
           ['get', 'point_count'],
-          '#34d399', // emerald-400 — 2–9 node (cluster kecil)
-          10,
-          '#a78bfa', // violet-400  — 10–29 node (cluster sedang)
-          30,
-          '#fbbf24', // amber-400   — 30–99 node (cluster besar)
-          100,
-          '#fb7185', // rose-400    — 100+ node (cluster sangat besar)
+          '#34d399', 10, '#a78bfa', 30, '#fbbf24', 100, '#fb7185',
         ],
         'circle-radius': [
           'step',
           ['get', 'point_count'],
-          16, // 2–9   (cluster kecil)
-          10,
-          26, // 10–29 (cluster sedang)
-          30,
-          36, // 30–99 (cluster besar)
-          100,
-          48, // 100+  (cluster sangat besar)
+          16, 10, 26, 30, 36, 100, 48,
         ],
         'circle-stroke-width': 3,
-        'circle-stroke-color': [
-          'step',
-          ['get', 'point_count'],
-          'rgba(52, 211, 153, 0.3)',  // emerald glow
-          10,
-          'rgba(167, 139, 250, 0.3)', // violet glow
-          30,
-          'rgba(251, 191, 36, 0.3)',  // amber glow
-          100,
-          'rgba(251, 113, 133, 0.3)', // rose glow
-        ],
+        'circle-stroke-color': 'rgba(255, 255, 255, 0.4)',
         'circle-opacity': 0.9,
       },
     });
 
-    // ── Cluster Count Labels ───────────────────────────────────────
+    // Cluster count numbers
     map.addLayer({
       id: LAYER_CLUSTER_COUNT,
       type: 'symbol',
@@ -113,19 +95,17 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
         'text-size': 13,
       },
-      paint: {
-        'text-color': '#ffffff',
-      },
+      paint: { 'text-color': '#ffffff' },
     });
 
-    // ── Unclustered Individual Points (node tunggal — biru terang) ──
+    // Individual 360 photo nodes
     map.addLayer({
       id: LAYER_UNCLUSTERED,
       type: 'circle',
       source: SOURCE_ID,
       filter: ['!', ['has', 'point_count']],
       paint: {
-        'circle-color': '#38bdf8', // sky-400 — warna unik untuk node tunggal
+        'circle-color': '#38bdf8',
         'circle-radius': 7,
         'circle-stroke-width': 2.5,
         'circle-stroke-color': '#ffffff',
@@ -134,346 +114,112 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
     });
   }, []);
 
-  const setupInteractions = useCallback(
-    (map: mapboxgl.Map) => {
-      // ── Click: Cluster → expand ──────────────────────────────────
-      map.on('click', LAYER_CLUSTERS, (e) => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: [LAYER_CLUSTERS],
-        });
-        if (!features.length) return;
+  const setupInteractions = useCallback((map: mapboxgl.Map) => {
+    map.on('click', LAYER_CLUSTERS, (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: [LAYER_CLUSTERS] });
+      if (!features.length) return;
 
-        const clusterId = features[0].properties?.cluster_id;
-        const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
+      const clusterId = features[0].properties?.cluster_id;
+      const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
 
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err) return;
-          const geometry = features[0].geometry as GeoJSON.Point;
-          const currentZoom = map.getZoom();
-
-          // Jika getClusterExpansionZoom menghasilkan zoom > currentZoom, gunakan zoom + 1 font level.
-          // Jika node sangat dekat (zoom tidak bertambah), paksa zoom in +2.5 level (hingga max 22) agar terpisah secara visual.
-          const targetZoom = (zoom && zoom > currentZoom) 
-            ? Math.min(zoom + 1.2, 22) 
-            : Math.min(currentZoom + 2.5, 22);
-
-          isAnimatingRef.current = true;
-
-          // Hitung pitch dinamis berdasarkan zoom
-          const targetPitch = Math.min(60, Math.max(0, ((targetZoom - 4) / 11) * 60));
-
-          (map as any)._isFlying = true;
-          map.flyTo({
-            center: geometry.coordinates as [number, number],
-            zoom: targetZoom,
-            pitch: targetPitch,
-            duration: 1000,
-            essential: true,
-            easing: (t) => 1 - Math.pow(1 - t, 3)
-          });
-
-          map.once('moveend', () => {
-            (map as any)._isFlying = false;
-          });
-        });
-      });
-
-      // ── Click: Unclustered point → open 360 viewer ─────────────────
-      map.on('click', LAYER_UNCLUSTERED, (e) => {
-        if (!e.features?.length) return;
-
-        const feature = e.features[0];
-        const id = feature.properties?.id;
-        
-        if (id) {
-          openViewer(id);
-        }
-      });
-
-      // ── Cursor affordance ────────────────────────────────────────
-      const pointerLayers = [LAYER_CLUSTERS, LAYER_UNCLUSTERED];
-      pointerLayers.forEach((layer) => {
-        map.on('mouseenter', layer, () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', layer, () => {
-          map.getCanvas().style.cursor = '';
-        });
-      });
-
-      // ── HTML Markers for Unclustered Labels ────────────────────────
-      map.on('render', () => {
-        const source = map.getSource(SOURCE_ID);
-        if (!source || !map.isSourceLoaded(SOURCE_ID)) return;
-        
+      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        const geometry = features[0].geometry as GeoJSON.Point;
         const currentZoom = map.getZoom();
-        const features = map.queryRenderedFeatures({ layers: [LAYER_UNCLUSTERED] });
-        const currentIds = new Set<string>();
+        const targetZoom = zoom && zoom > currentZoom ? Math.min(zoom + 1.2, 22) : Math.min(currentZoom + 2.5, 22);
 
-        // Label teks muncul kapanpun node tunggal (unclustered) terlihat
-        if (features.length > 0) {
-          features.forEach(feature => {
-            const id = feature.properties?.id;
-            // FIX: Map strictly from the joined locationName
-            const name = feature.properties?.locationName;
-            if (!id) return;
-            
-            currentIds.add(id);
-
-            if (!markersRef.current[id]) {
-              // FIX: Root container to break out of layout restrictions
-              const rootEl = document.createElement('div');
-              rootEl.className = 'relative w-0 h-0';
-
-              const labelEl = document.createElement('div');
-              labelEl.className = 'absolute top-full left-1/2 -translate-x-1/2 mt-3.5 pointer-events-none whitespace-nowrap text-white text-xs font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] tracking-wider transition-opacity duration-300';
-              labelEl.textContent = name || 'Unknown Location';
-              
-              rootEl.appendChild(labelEl);
-              
-              const geometry = feature.geometry as GeoJSON.Point;
-              
-              const marker = new mapboxgl.Marker({ element: rootEl, anchor: 'center' })
-                .setLngLat(geometry.coordinates as [number, number])
-                .addTo(map);
-                
-              markersRef.current[id] = marker;
-            } else {
-              // Keep coordinates synced if data updates
-              const geometry = feature.geometry as GeoJSON.Point;
-              markersRef.current[id].setLngLat(geometry.coordinates as [number, number]);
-            }
-          });
-        }
-
-        // Cleanup markers that are out of view, clustered, or hidden by zoom threshold
-        Object.keys(markersRef.current).forEach(id => {
-          if (!currentIds.has(id)) {
-            markersRef.current[id].remove();
-            delete markersRef.current[id];
-          }
-        });
-      });
-    },
-    [openViewer],
-  );
-
-  const geoJSON = useMapStore((s) => s.geoJSON);
-  const searchQuery = useMapStore((s) => s.searchQuery);
-  const activeSection = useMapStore((s) => s.activeSection);
-  const boundaries = useMapStore((s) => s.boundaries);
-  const fetchBoundaries = useMapStore((s) => s.fetchBoundaries);
-
-  useEffect(() => {
-    fetchBoundaries(targetCompanyId);
-  }, [targetCompanyId, fetchBoundaries]);
-
-  // ── Sync Boundary Layers to Mapbox Map ───────────────────────────
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-    const map = mapRef.current;
-
-    boundaries.forEach((boundary) => {
-      const sourceId = `boundary-source-${boundary.id}`;
-      const fillLayerId = `boundary-fill-${boundary.id}`;
-      const lineLayerId = `boundary-line-${boundary.id}`;
-
-      let source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
-
-      // Ensure boundary layers are placed UNDER clusters and point markers
-      const beforeLayerId = map.getLayer('clusters') 
-        ? 'clusters' 
-        : (map.getLayer('unclustered-point') ? 'unclustered-point' : undefined);
-
-      if (!source) {
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: boundary.geojson,
-        });
-
-        // Add fill layer UNDER photo nodes
-        map.addLayer(
-          {
-            id: fillLayerId,
-            type: 'fill',
-            source: sourceId,
-            paint: {
-              'fill-color': boundary.color || '#06b6d4',
-              'fill-opacity': boundary.is_visible ? boundary.opacity || 0.35 : 0,
-            },
-          },
-          beforeLayerId
-        );
-
-        // Add glowing outline stroke layer UNDER photo nodes
-        map.addLayer(
-          {
-            id: lineLayerId,
-            type: 'line',
-            source: sourceId,
-            paint: {
-              'line-color': boundary.color || '#06b6d4',
-              'line-width': 2.5,
-              'line-opacity': boundary.is_visible ? 0.9 : 0,
-            },
-          },
-          beforeLayerId
-        );
-
-        // Add click listener for polygon popup with ultra-clean styling & edit button
-        map.on('click', fillLayerId, (e) => {
-          // Check if user actually clicked on a node point or cluster circle sitting on top of the polygon
-          const activePointLayers = [LAYER_UNCLUSTERED, LAYER_CLUSTERS, LAYER_CLUSTER_COUNT].filter(id => map.getLayer(id));
-          if (activePointLayers.length > 0) {
-            const nodeFeatures = map.queryRenderedFeatures(e.point, { layers: activePointLayers });
-            if (nodeFeatures && nodeFeatures.length > 0) {
-              // Node point or cluster circle clicked — skip boundary popup!
-              return;
-            }
-          }
-
-          if (e.features && e.features[0]) {
-            const props = e.features[0].properties || {};
-            const cleanTitle = (boundary.name || 'Batas Wilayah').replace(/_/g, ' ');
-            
-            const propsRows = Object.entries(props)
-              .filter(([k]) => !k.startsWith('_') && typeof k === 'string' && k.toLowerCase() !== 'layer')
-              .slice(0, 6)
-              .map(([k, v]) => `
-                <div class="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200 dark:border-white/10 gap-2">
-                  <span class="text-zinc-500 dark:text-zinc-400 font-medium truncate capitalize">${k.replace(/_/g, ' ')}</span>
-                  <span class="text-zinc-800 dark:text-zinc-200 font-semibold truncate max-w-[120px] text-right">${v}</span>
-                </div>
-              `)
-              .join('');
-
-            const popupNode = document.createElement('div');
-            popupNode.className = 'flex flex-col gap-2.5 text-zinc-900 dark:text-white max-w-[280px] p-1';
-            popupNode.innerHTML = `
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full shrink-0 shadow-md" style="background-color: ${boundary.color || '#06b6d4'}"></span>
-                <h4 class="font-bold text-sm text-zinc-900 dark:text-white leading-tight break-words flex-1">${cleanTitle}</h4>
-              </div>
-
-              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-400 text-xs font-bold w-fit">
-                <span>Luas: ${boundary.total_area_ha?.toLocaleString('id-ID')} ha</span>
-              </div>
-
-              ${propsRows ? `<div class="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1">${propsRows}</div>` : ''}
-            `;
-
-            new mapboxgl.Popup({ closeButton: true, maxWidth: '300px' })
-              .setLngLat(e.lngLat)
-              .setDOMContent(popupNode)
-              .addTo(map);
-          }
-        });
-      } else {
-        // Update existing layer data and visibility
-        source.setData(boundary.geojson);
-        if (map.getLayer(fillLayerId)) {
-          map.setPaintProperty(fillLayerId, 'fill-opacity', boundary.is_visible ? boundary.opacity || 0.35 : 0);
-          map.setPaintProperty(fillLayerId, 'fill-color', boundary.color || '#06b6d4');
-        }
-        if (map.getLayer(lineLayerId)) {
-          map.setPaintProperty(lineLayerId, 'line-opacity', boundary.is_visible ? 0.9 : 0);
-          map.setPaintProperty(lineLayerId, 'line-color', boundary.color || '#06b6d4');
-        }
-      }
-    });
-  }, [boundaries, isMapLoaded]);
-
-  // ── Sync GeoJSON data to map source when it loads from Supabase or filters change ──
-  useEffect(() => {
-    if (mapRef.current && geoJSON && isMapLoaded) {
-      const source = mapRef.current.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
-      if (source) {
-        const filteredFeatures = geoJSON.features.filter((feature) => {
-          const loc = feature.properties;
-          if (!loc) return false;
-          const matchesSearch = loc.locationName.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesSection = activeSection === 'ALL' ? true : loc.section === activeSection;
-          return matchesSearch && matchesSection;
-        });
-
-        source.setData({
-          type: 'FeatureCollection',
-          features: filteredFeatures
-        });
-      }
-
-      // ── Initial Cinematic Entry Animation (Triggered when shouldAnimate is true) ──
-      if (!hasAnimatedRef.current && geoJSON.features.length > 0 && shouldAnimate) {
-        hasAnimatedRef.current = true;
-        
-        // Check for URL query coordinates
-        const urlLat = searchParams.get('lat');
-        const urlLng = searchParams.get('lng');
-        const urlZoom = searchParams.get('zoom');
-        
-        let focusCoords: [number, number];
-        let focusZoom = 6.95;
-        
-        if (urlLat && urlLng) {
-          focusCoords = [parseFloat(urlLng), parseFloat(urlLat)];
-          if (urlZoom) {
-            focusZoom = parseFloat(urlZoom);
-          }
-        } else {
-          const focusFeature = geoJSON.features[0];
-          focusCoords = (focusFeature.geometry as GeoJSON.Point).coordinates as [number, number];
-        }
-
-        // LOGIC FIX 2: The map.on('zoom') pitch handler was calling setPitch() every frame,
-        // which Mapbox treats as a user interruption, aborting flyTo mid-flight.
-        // Solution: Set a guard flag to disable pitch updates during animation.
         isAnimatingRef.current = true;
-        
-        mapRef.current.flyTo({
-          center: focusCoords,
-          zoom: focusZoom,
-          speed: 1, // Sedikit lebih cepat dari 0.1 agar tidak terlalu lambat
-          curve: 1,
+        map.flyTo({
+          center: geometry.coordinates as [number, number],
+          zoom: targetZoom,
+          pitch: Math.min(60, Math.max(0, ((targetZoom - 4) / 11) * 60)),
+          duration: 900,
           essential: true,
-          easing: (t) => 1 - Math.pow(1 - t, 4)
         });
-        
-        // Re-enable pitch handler after animation completes
-        mapRef.current.once('moveend', () => {
+
+        map.once('moveend', () => {
           isAnimatingRef.current = false;
         });
-      }
+      });
+    });
+
+    map.on('click', LAYER_UNCLUSTERED, (e) => {
+      if (!e.features?.length) return;
+      const id = e.features[0].properties?.id;
+      if (id) openViewer(id);
+    });
+
+    [LAYER_CLUSTERS, LAYER_UNCLUSTERED].forEach((layer) => {
+      map.on('mouseenter', layer, () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', layer, () => {
+        map.getCanvas().style.cursor = '';
+      });
+    });
+  }, [openViewer]);
+
+  // Synchronize GeoJSON source data with active search/section filters
+  useEffect(() => {
+    if (!mapRef.current || !geoJSON || !isMapLoaded) return;
+    const source = mapRef.current.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
+    if (!source) return;
+
+    const filtered = geoJSON.features.filter((feature) => {
+      const loc = feature.properties;
+      if (!loc) return false;
+      const matchesSearch = loc.locationName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSection = activeSection === 'ALL' ? true : loc.section === activeSection;
+      return matchesSearch && matchesSection;
+    });
+
+    source.setData({ type: 'FeatureCollection', features: filtered });
+
+    // Initial cinematic drop-in camera animation
+    if (!hasAnimatedRef.current && geoJSON.features.length > 0 && shouldAnimate) {
+      hasAnimatedRef.current = true;
+      const urlLat = searchParams.get('lat');
+      const urlLng = searchParams.get('lng');
+      const urlZoom = searchParams.get('zoom');
+
+      const focusCoords: [number, number] = urlLat && urlLng
+        ? [parseFloat(urlLng), parseFloat(urlLat)]
+        : ((geoJSON.features[0].geometry as GeoJSON.Point).coordinates as [number, number]);
+
+      isAnimatingRef.current = true;
+      mapRef.current.flyTo({
+        center: focusCoords,
+        zoom: urlZoom ? parseFloat(urlZoom) : 6.95,
+        speed: 1,
+        curve: 1,
+        essential: true,
+      });
+
+      mapRef.current.once('moveend', () => {
+        isAnimatingRef.current = false;
+      });
     }
   }, [geoJSON, isMapLoaded, searchQuery, activeSection, searchParams, shouldAnimate]);
 
+  // Mapbox instance initialization and WebGL Context Cleanup
   useEffect(() => {
     if (!mapContainerRef.current) return;
-
-    // ── Set token ────────────────────────────────────────────────────
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
-    // ── Create map ───────────────────────────────────────────────────
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: MAPBOX_STYLE,
       center: INITIAL_CENTER,
-      zoom: 1.5, // Start in deep space for cinematic drop-in
-      maxZoom: 22, // THIS IS CRITICAL TO ALLOW DEEP ZOOM
+      zoom: 1.5,
+      maxZoom: 22,
       projection: GLOBE_PROJECTION,
-      antialias: false, // performance: skip anti-aliasing
+      antialias: false,
     });
-
-    // ── Normalize Scroll Zoom Physics ────────────────────────────────
-    map.scrollZoom.setZoomRate(1 / 50); 
-    map.scrollZoom.setWheelZoomRate(1 / 50);
 
     mapRef.current = map;
     setMapInstance(map);
-
-    // ── Navigation controls ──────────────────────────────────────────
     map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
 
-    // ── Globe atmosphere + data layers (re-runs on every style swap) ─
     map.on('style.load', () => {
       map.setFog({
         color: 'rgb(10, 10, 20)',
@@ -482,61 +228,28 @@ export function useMapbox(options?: { shouldAnimate?: boolean; adminId?: string 
         'space-color': 'rgb(5, 5, 15)',
         'star-intensity': 0.6,
       });
-
-      // Re-add GeoJSON source + clustering layers after every style swap
       setupLayers(map);
     });
 
-    // ── Interactions (registered once — persist across style changes) ─
     map.on('load', () => {
       setIsMapLoaded(true);
       setupInteractions(map);
     });
 
-    // ── Dynamic 3D pitch based on zoom level ──────────────────────────
-    //    zoom ≤ 4  → pitch 0° (flat globe view)
-    //    zoom 4–15 → linear interpolation 0°–65°
-    //    zoom ≥ 15 → capped at 65°
-    map.on('zoom', () => {
-      // CRITICAL FIX: Skip pitch updates while flyTo animation is running
-      // setPitch() during flyTo causes Mapbox to abort the animation mid-flight
-      if (isAnimatingRef.current || (map as any)._isFlying) return;
-      
-      const zoom = map.getZoom();
-      const MIN_ZOOM = 4;
-      const MAX_ZOOM = 15;
-      const MAX_PITCH = 65;
-
-      const targetPitch =
-        zoom <= MIN_ZOOM
-          ? 0
-          : Math.min(
-              MAX_PITCH,
-              ((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * MAX_PITCH,
-            );
-
-      // Only update if pitch differs noticeably (avoids micro-jitter)
-      if (Math.abs(map.getPitch() - targetPitch) > 0.5) {
-        map.setPitch(targetPitch);
-      }
-    });
-
-    // ── CRITICAL: Destroy WebGL context on unmount ────────────────────
+    // Cleanup WebGL Context on Unmount to prevent memory leaks
     return () => {
-      Object.values(markersRef.current).forEach(marker => marker.remove());
+      Object.values(markersRef.current).forEach((m) => m.remove());
       markersRef.current = {};
       mapRef.current = null;
       setMapInstance(null);
-      
-      // Delay removal to allow Mapbox workers and async requests to complete
-      // avoiding 'this.errorCb is not a function' crashes during unmount.
+
       setTimeout(() => {
         try {
           map.remove();
         } catch (e) {
-          console.error('[useMapbox] Graceful unmount error:', e);
+          console.error('[useMapbox] WebGL graceful cleanup error:', e);
         }
-      }, 250);
+      }, 200);
     };
   }, [setupLayers, setupInteractions, setMapInstance]);
 

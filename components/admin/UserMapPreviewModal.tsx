@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { X, Loader2, MapPin } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
 import { MAPBOX_STYLE, INITIAL_CENTER } from '@/lib/constants';
 import Modal from '@/components/ui/Modal';
 
@@ -33,27 +32,18 @@ export default function UserMapPreviewModal({
     if (!isOpen || !userId) return;
     
     let isMounted = true;
-    const supabase = createClient();
     
     async function fetchUserNodesAndInitMap() {
       setLoading(true);
       setError('');
       try {
-        const { data, error: fetchError } = await supabase
-          .from('spatial_nodes')
-          .select(`
-            id,
-            longitude,
-            latitude,
-            locations ( name, description )
-          `)
-          .eq('created_by', userId);
-
-        if (fetchError) throw fetchError;
+        const res = await fetch(`/api/public/nodes?adminId=${encodeURIComponent(userId)}`);
+        if (!res.ok) throw new Error('Gagal memuat titik peta pengguna.');
         
         if (!isMounted) return;
         
-        const nodes = data || [];
+        const data = await res.json();
+        const nodes = data.nodes || [];
         setNodesCount(nodes.length);
         
         if (!mapContainerRef.current) return;
@@ -93,7 +83,7 @@ export default function UserMapPreviewModal({
         if (nodes.length > 0) {
           const bounds = new mapboxgl.LngLatBounds();
           
-          nodes.forEach(node => {
+          nodes.forEach((node: any) => {
             if (node.longitude && node.latitude) {
               const el = document.createElement('div');
               el.className = 'w-4 h-4 bg-cyan-400 border-2 border-white rounded-full ';

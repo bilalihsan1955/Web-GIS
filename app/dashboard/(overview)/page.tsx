@@ -1,26 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, Building2, Settings, Layers } from 'lucide-react';
+import { ChevronLeft, Layers, Settings } from 'lucide-react';
 import SmartUploader from '@/components/admin/SmartUploader';
 import DashboardStats from '@/components/admin/DashboardStats';
 import NodesTable from '@/components/admin/NodesTable';
-import EditNodeModal from '@/components/admin/EditNodeModal';
-import DeleteNodeModal from '@/components/admin/DeleteNodeModal';
 import CompanyGrid from '@/components/admin/CompanyGrid';
-import ManageSectionsModal from '@/components/admin/ManageSectionsModal';
-import UploadBoundaryModal from '@/components/admin/UploadBoundaryModal';
-import ManageBoundariesModal from '@/components/admin/ManageBoundariesModal';
-import { useState, useEffect } from 'react';
+import { DashboardModals } from '@/components/admin/DashboardModals';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useNodeMutations } from '@/hooks/useNodeMutations';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
+// ============================================================================
+// app/dashboard/(overview)/page.tsx: Clean Dashboard Overview (< 180 lines)
+// Clean Architecture: Visual Modals grouped into DashboardModals component
+// ============================================================================
+
 export default function DashboardPage() {
-  const [isManageSectionsModalOpen, setIsManageSectionsModalOpen] = useState(false);
-  const [isUploadBoundaryModalOpen, setIsUploadBoundaryModalOpen] = useState(false);
-  const [isManageBoundariesModalOpen, setIsManageBoundariesModalOpen] = useState(false);
+  const [isManageSectionsOpen, setIsManageSectionsOpen] = useState(false);
+  const [isUploadBoundaryOpen, setIsUploadBoundaryOpen] = useState(false);
+  const [isManageBoundariesOpen, setIsManageBoundariesOpen] = useState(false);
   const { t } = useLanguage();
+
   const {
     nodes,
     loading,
@@ -45,122 +47,75 @@ export default function DashboardPage() {
     adminGroups,
     selectedCompanyId,
     setSelectedCompanyId,
-    isSuperadminGlobal
+    isSuperadminGlobal,
   } = useDashboardData();
 
   const mutations = useNodeMutations({
     fetchData,
     setNodes,
     setLocations,
-    setTotalNodes
+    setTotalNodes,
   });
 
   useEffect(() => {
-    const handleOpenBoundaries = () => setIsManageBoundariesModalOpen(true);
+    const handleOpenBoundaries = () => setIsManageBoundariesOpen(true);
     window.addEventListener('open-manage-boundaries', handleOpenBoundaries);
     return () => window.removeEventListener('open-manage-boundaries', handleOpenBoundaries);
   }, []);
 
-  // Prevent hydration mismatch by returning a neutral placeholder during SSR and initial hydration
   if (!isMounted) {
-    return (
-      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center"></div>
-    );
+    return <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center" />;
   }
 
-  if (!isRoleLoaded) {
-    if (isSuperadminGlobal) {
-      return (
-        <div className="animate-fade-in pb-12">
-          <CompanyGrid 
-            adminGroups={[]} 
-            onSelect={setSelectedCompanyId} 
-            loading={true}
-          />
-        </div>
-      );
-    }
-
-    const skeletonCards = (userRole === 'admin' || userRole === 'superadmin') ? [1, 2, 3] : [1, 2];
-
-    return (
-      <div className="flex flex-col gap-8 animate-pulse pb-12 mt-2">
-        {/* Placeholder for unified metrics bar */}
-        <div className="bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800 rounded-[24px] flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800 overflow-hidden shadow-sm">
-          {skeletonCards.map(i => (
-            <div key={i} className="flex-1 p-6 flex items-center">
-              <div className="h-[58px] w-[58px] rounded-[24px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
-              <div className="ml-5 space-y-1 w-full">
-                <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-8 w-16 bg-zinc-200 dark:bg-zinc-800 rounded mt-1"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Placeholder for Uploader Header */}
-        <div className="flex justify-between items-center -mb-2">
-           <div className="h-6 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-lg"></div>
-           <div className="h-9 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-[12px]"></div>
-        </div>
-
-        {/* Placeholder for Uploader Box */}
-        <div className="h-48 rounded-[24px] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800"></div>
-
-        {/* Placeholder for table */}
-        <div className="h-96 rounded-[24px] bg-white dark:bg-[#09090B] border border-zinc-200 dark:border-zinc-800"></div>
-      </div>
-    );
-  }
-
-  // If Superadmin is in Global Mode, ONLY show the Company Grid Directory
+  // Superadmin Global Mode: Directory view
   if (isSuperadminGlobal) {
     return (
       <div className="animate-fade-in pb-12">
-        <CompanyGrid 
-          adminGroups={adminGroups} 
-          onSelect={setSelectedCompanyId} 
-          loading={loading}
+        <CompanyGrid
+          adminGroups={adminGroups}
+          onSelect={setSelectedCompanyId}
+          loading={loading || !isRoleLoaded}
           onRefresh={fetchData}
         />
       </div>
     );
   }
 
-  // Active Impersonation or Normal Admin/User Dashboard
-  const activeCompany = adminGroups.find(g => g.user_id === selectedCompanyId);
+  const activeCompany = adminGroups.find((g) => g.user_id === selectedCompanyId);
+  const targetGroupId = userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId;
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      
-      {/* ── SUPERADMIN IMPERSONATION HEADER ── */}
+      {/* Superadmin Impersonation Header */}
       {userRole === 'superadmin' && selectedCompanyId !== 'all' && (
         <div className="flex flex-col gap-3 mb-4">
-          <button 
+          <button
             onClick={() => setSelectedCompanyId('all')}
-            className="group flex items-center text-xs font-bold tracking-wider text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white transition-colors w-fit border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090B] px-4 py-2"
+            className="group flex items-center text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors w-fit border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3.5 py-1.5 rounded-xl"
           >
-            <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
-            {t('backToCompanies') || 'Back'}
+            <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
+            {t('backToCompanies') || 'Kembali'}
           </button>
-          
-          <div className="flex items-center gap-4 mt-2">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden relative">
-              {activeCompany?.company_logo ? (
-                <Image src={activeCompany.company_logo} alt={activeCompany.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain" />
-              ) : (
-                <Image src="/Logo.webp" alt={activeCompany?.company_name || 'Logo'} width={48} height={48} className="w-full h-full object-contain" />
-              )}
+
+          <div className="flex items-center gap-4 mt-1">
+            <div className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 overflow-hidden relative border border-zinc-200 dark:border-zinc-700">
+              <Image
+                src={activeCompany?.company_logo || '/Logo.webp'}
+                alt={activeCompany?.company_name || 'Logo'}
+                width={44}
+                height={44}
+                className="w-full h-full object-contain"
+              />
             </div>
-            <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tighter">
-              {activeCompany?.company_name || 'Tanpa Nama'}
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+              {activeCompany?.company_name || 'Tanpa nama'}
             </h2>
           </div>
         </div>
       )}
 
-      {/* ── ANALYTICS STAT CARDS ── */}
-      <DashboardStats 
+      {/* Analytics Stat Cards */}
+      <DashboardStats
         userRole={userRole}
         loading={loading}
         totalNodes={totalNodes}
@@ -168,104 +123,69 @@ export default function DashboardPage() {
         totalUsers={totalUsers}
       />
 
-      {/* ── SMART BATCH UPLOADER & BOUNDARY UPLOADER ── */}
+      {/* Upload Pipeline */}
       {(userRole === 'user' || userRole === 'admin' || userRole === 'superadmin') && (
-        <section>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <h2 className="text-xl font-bold text-zinc-950 dark:text-white tracking-tight">{t('uploadPipeline')}</h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <button 
-                onClick={() => setIsUploadBoundaryModalOpen(true)}
-                className="flex items-center text-xs font-bold tracking-wider text-white bg-cyan-600 hover:bg-cyan-700 transition-all px-4 py-2.5 rounded-[12px] shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
+              {t('uploadPipeline') || 'Pipeline Unggah'}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsUploadBoundaryOpen(true)}
+                className="flex items-center text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-700 px-3.5 py-2 rounded-xl transition-all shadow-none"
               >
-                <Layers className="w-4 h-4 mr-1.5" />
-                + Upload Batas Wilayah
+                <Layers className="w-3.5 h-3.5 mr-1.5" /> + Upload batas wilayah
               </button>
-              <button 
-                onClick={() => setIsManageBoundariesModalOpen(true)}
-                className="flex items-center text-xs font-bold tracking-wider text-cyan-700 dark:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all px-4 py-2.5 rounded-[12px] cursor-pointer"
+              <button
+                onClick={() => setIsManageBoundariesOpen(true)}
+                className="flex items-center text-xs font-semibold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/20 px-3.5 py-2 rounded-xl transition-all"
               >
-                <Layers className="w-4 h-4 mr-1.5" />
-                Kelola Batas Wilayah
+                <Layers className="w-3.5 h-3.5 mr-1.5" /> Kelola batas
               </button>
-              <button 
-                onClick={() => setIsManageSectionsModalOpen(true)}
-                className="flex items-center text-xs font-bold tracking-wider text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-[12px] cursor-pointer"
+              <button
+                onClick={() => setIsManageSectionsOpen(true)}
+                className="flex items-center text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 px-3.5 py-2 rounded-xl transition-colors"
               >
-                <Settings className="w-4 h-4 mr-1.5" />
-                {t('manageSections')}
+                <Settings className="w-3.5 h-3.5 mr-1.5" /> {t('manageSections') || 'Kelola sektor'}
               </button>
             </div>
           </div>
-          <SmartUploader 
-            onUploadComplete={fetchData} 
-            assignToGroupId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId} 
-          />
+
+          <SmartUploader onUploadComplete={fetchData} assignToGroupId={targetGroupId} />
         </section>
       )}
 
-      {/* ── LIVE DATA GRID / TABLE ── */}
-        <NodesTable 
-          userRole={userRole}
-          currentUser={currentUser}
-          currentUserGroupId={currentUserGroupId}
-          loading={loading}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          sectionFilter={sectionFilter}
-          setSectionFilter={setSectionFilter}
-          dynamicSections={dynamicSections}
-          filteredNodes={filteredNodes}
-          allNodes={nodes}
-          fetchData={fetchData}
-          openEditModal={mutations.openEditModal}
-          openDeleteModal={mutations.openDeleteModal}
-        />
-
-      {/* Modals */}
-      <UploadBoundaryModal
-        isOpen={isUploadBoundaryModalOpen}
-        onClose={() => setIsUploadBoundaryModalOpen(false)}
-        onSuccess={fetchData}
-        assignToGroupId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
-      />
-      <ManageBoundariesModal
-        isOpen={isManageBoundariesModalOpen}
-        onClose={() => setIsManageBoundariesModalOpen(false)}
-        onRefresh={fetchData}
-      />
-      <ManageSectionsModal
-        isOpen={isManageSectionsModalOpen}
-        onClose={() => setIsManageSectionsModalOpen(false)}
-      />
-      <EditNodeModal 
-        adminId={userRole === 'superadmin' ? selectedCompanyId : currentUserGroupId}
-        isOpen={mutations.isEditModalOpen}
-        onClose={() => mutations.setIsEditModalOpen(false)}
-        onSubmit={mutations.handleEditSubmit}
-        modalError={mutations.modalError}
-        modalLoading={mutations.modalLoading}
-        editImagePreview={mutations.editImagePreview}
-        handleEditImageSelect={mutations.handleEditImageSelect}
-        editLocationName={mutations.editLocationName}
-        setEditLocationName={mutations.setEditLocationName}
-        editLocationDescription={mutations.editLocationDescription}
-        setEditLocationDescription={mutations.setEditLocationDescription}
-        editLocationSectionId={mutations.editLocationSectionId}
-        setEditLocationSectionId={mutations.setEditLocationSectionId}
-        editCaptureDate={mutations.editCaptureDate}
-        setEditCaptureDate={mutations.setEditCaptureDate}
-        editIsPublished={mutations.editIsPublished}
-        setEditIsPublished={mutations.setEditIsPublished}
-      />
-      <DeleteNodeModal 
-        isOpen={mutations.isDeleteModalOpen}
-        onClose={() => mutations.setIsDeleteModalOpen(false)}
-        onConfirm={mutations.confirmDeleteNode}
-        deleteError={mutations.deleteError}
-        deleteLoading={mutations.deleteLoading}
+      {/* Data Grid / Table */}
+      <NodesTable
+        userRole={userRole}
+        currentUser={currentUser}
+        currentUserGroupId={currentUserGroupId}
+        loading={loading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        sectionFilter={sectionFilter}
+        setSectionFilter={setSectionFilter}
+        dynamicSections={dynamicSections}
+        filteredNodes={filteredNodes}
+        allNodes={nodes}
+        fetchData={fetchData}
+        openEditModal={mutations.openEditModal}
+        openDeleteModal={mutations.openDeleteModal}
       />
 
+      {/* Grouped Subcomponent Modals */}
+      <DashboardModals
+        isUploadBoundaryOpen={isUploadBoundaryOpen}
+        setIsUploadBoundaryOpen={setIsUploadBoundaryOpen}
+        isManageBoundariesOpen={isManageBoundariesOpen}
+        setIsManageBoundariesOpen={setIsManageBoundariesOpen}
+        isManageSectionsOpen={isManageSectionsOpen}
+        setIsManageSectionsOpen={setIsManageSectionsOpen}
+        targetGroupId={targetGroupId}
+        fetchData={fetchData}
+        mutations={mutations}
+      />
     </div>
   );
 }

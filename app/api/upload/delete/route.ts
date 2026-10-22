@@ -1,48 +1,28 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { createAdminClient, createClient } from '@/utils/supabase/server';
+import { deleteFile } from '@/lib/storage';
+import { getAuthSession } from '@/lib/auth/jwt';
+
+// ============================================================================
+// app/api/upload/delete/route.ts: Safe File Deletion Endpoint
+// Enforces path traversal assertion and safe storage deletion
+// ============================================================================
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Please log in to delete files.' }, { status: 401 });
+    const session = await getAuthSession(req);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan.' }, { status: 401 });
     }
 
     const { filePath } = await req.json();
-    if (!filePath) return NextResponse.json({ error: 'No filepath provided' }, { status: 400 });
-
-    const safeName = filePath.split('/').pop()?.replace(/[^a-zA-Z0-9.-_]/g, '');
-    if (!safeName) return NextResponse.json({ error: 'Invalid filepath' }, { status: 400 });
-
-    const adminClient = createAdminClient();
-
-    // 1. Remove from Supabase Storage buckets ('panoramas' & 'logos')
-    try {
-      await adminClient.storage.from('panoramas').remove([safeName]);
-      await adminClient.storage.from('logos').remove([safeName]);
-    } catch (storageErr) {
-      console.error('Error removing file from Supabase Storage:', storageErr);
+    if (!filePath) {
+      return NextResponse.json({ error: 'Parameter filePath wajib diisi.' }, { status: 400 });
     }
 
-    // 2. Backwards-compatibility fallback for legacy local uploads if present
-    if (filePath.startsWith('/uploads/') || filePath.startsWith('/images/logo/')) {
-      const uploadDir = path.join(process.cwd(), 'public', filePath.startsWith('/images/logo/') ? 'images/logo' : 'uploads');
-      const absolutePath = path.join(uploadDir, safeName);
-      if (path.resolve(absolutePath).startsWith(path.resolve(uploadDir))) {
-        try {
-          await fs.access(absolutePath);
-          await fs.unlink(absolutePath);
-        } catch {
-          // File already gone or inaccessible
-        }
-      }
-    }
-
-    return NextResponse.json({ success: true });
+    const success = await deleteFile(filePath);
+    return NextResponse.json({ success });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Storage Delete Error]:', error);
+    return NextResponse.json({ error: error.message || 'Gagal menghapus berkas.' }, { status: 500 });
   }
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, ChevronDown, Edit, Trash2, ChevronLeft, ChevronRight, Copy, CheckSquare, Square, MinusSquare, AlertTriangle, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { createClient } from '@/utils/supabase/client';
 import DuplicateNodesModal from './DuplicateNodesModal';
 import Modal from '@/components/ui/Modal';
 
@@ -116,7 +115,6 @@ export default function NodesTable({
     setBulkDeleteProgress({ current: 0, total: nodesToDelete.length });
 
     try {
-      const supabase = createClient();
       for (let i = 0; i < nodesToDelete.length; i++) {
         const node = nodesToDelete[i];
         setBulkDeleteProgress({ current: i + 1, total: nodesToDelete.length });
@@ -127,27 +125,24 @@ export default function NodesTable({
             await fetch('/api/upload/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filePath: node.image_url })
+              body: JSON.stringify({ filePath: node.image_url }),
             });
           } catch {
-            // Continue even if file delete fails
+            // Continue even if physical file deletion fails
           }
         }
+      }
 
-        // 2. Delete node from DB
-        await supabase.from('spatial_nodes').delete().eq('id', node.id);
+      // 2. Bulk delete nodes and orphan locations via Standalone API
+      const res = await fetch('/api/dashboard/nodes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: nodesToDelete.map((n) => n.id) }),
+      });
 
-        // 3. Delete orphan location if no other nodes reference it
-        if (node.location_id) {
-          const { count } = await supabase
-            .from('spatial_nodes')
-            .select('id', { count: 'exact', head: true })
-            .eq('location_id', node.location_id);
-
-          if (count === 0) {
-            await supabase.from('locations').delete().eq('id', node.location_id);
-          }
-        }
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Gagal menghapus beberapa data.');
       }
 
       setSelectedNodeIds(new Set());

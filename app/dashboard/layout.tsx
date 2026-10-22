@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { LayoutDashboard, Users, LogOut, Image as ImageIcon, Loader2, Map, Globe2, Compass, Menu, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,7 +19,6 @@ const bricolage = Bricolage_Grotesque({
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const pathname = usePathname();
-  const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>('user');
@@ -54,54 +52,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     async function fetchUserData() {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        setLoading(false);
-        setIsLoadingRole(false);
-        setIsLoadingProfile(false);
-        return;
-      }
-      setUser(currentUser);
+      try {
+        const [meRes, profileRes] = await Promise.all([
+          fetch('/api/auth/me').catch(() => null),
+          fetch('/api/dashboard/company-profile').catch(() => null),
+        ]);
 
-      // Parallelize role query & company profile fetch (async-parallel / vercel-react-best-practices)
-      const [roleRes, profileRes] = await Promise.all([
-        supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', currentUser.id)
-          .single(),
-        fetch('/api/dashboard/company-profile').catch(err => {
-          console.error("Failed to fetch company profile", err);
-          return null;
-        })
-      ]);
-
-      if (roleRes?.data) {
-        setRole(roleRes.data.role);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('webgis_user_role', roleRes.data.role);
+        if (meRes && meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.authenticated && meData.user) {
+            setUser(meData.user);
+            const userRole = meData.user.role || 'user';
+            setRole(userRole);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('webgis_user_role', userRole);
+            }
+          }
         }
-      }
 
-      if (profileRes && profileRes.ok) {
-        try {
+        if (profileRes && profileRes.ok) {
           const profileData = await profileRes.json();
           if (profileData.profile) {
             setCompanyProfile(profileData.profile);
           }
-        } catch (err) {
-          console.error("Failed to parse company profile json", err);
         }
+      } catch (err) {
+        console.error('Failed to fetch dashboard session:', err);
+      } finally {
+        setIsLoadingProfile(false);
+        setIsLoadingRole(false);
+        setLoading(false);
       }
-
-      // Batch state updates after parallel fetch completes
-      setIsLoadingProfile(false);
-      setIsLoadingRole(false);
-      setLoading(false);
     }
     
     fetchUserData();
-  }, [pathname, supabase]);
+  }, [pathname]);
 
   const toggleDesktopSidebar = () => {
     const nextState = !isDesktopCollapsed;

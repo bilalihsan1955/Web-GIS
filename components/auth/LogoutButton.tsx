@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { LogOut } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -14,7 +13,6 @@ interface LogoutButtonProps {
 
 export default function LogoutButton({ className = '', fullWidth = false }: LogoutButtonProps = {}) {
   const router = useRouter();
-  const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
 
@@ -22,7 +20,11 @@ export default function LogoutButton({ className = '', fullWidth = false }: Logo
     if (typeof window !== 'undefined') {
       localStorage.removeItem('webgis_user_role');
     }
-    await supabase.auth.signOut();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Continue redirect
+    }
     router.refresh();
     router.push('/dashboard/login');
   };

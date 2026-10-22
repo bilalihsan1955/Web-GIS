@@ -1,100 +1,78 @@
-import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/utils/supabase/server'
+import { NextResponse } from 'next/server';
+import { requireAuth, assertAdminOrSuperAdmin } from '@/lib/auth/rbac';
+import { hashPassword } from '@/lib/auth/jwt';
+import { withTransaction, query } from '@/lib/db';
+import { enforceRateLimit } from '@/lib/security/rateLimit';
+
+export const dynamic = 'force-dynamic';
+
+// ============================================================================
+// app/api/dashboard/create-user/route.ts: Standalone User Creation API
+// Zero-Trust RBAC & Bcrypt Cost 12 (OWASP A02:2021 & A03:SQLi Parameterized)
+// ============================================================================
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const adminSupabase = createAdminClient()
-    
-    // 1. Authenticate the requester (via cookies or Bearer token header)
-    let user = null;
-    const { data: authData } = await supabase.auth.getUser();
-    user = authData?.user || null;
+    const rateLimitError = enforceRateLimit(request, 'create-user', 10, 60000);
+    if (rateLimitError) return rateLimitError;
 
-    if (!user) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        const { data: tokenData } = await adminSupabase.auth.getUser(token);
-        if (tokenData?.user) {
-          user = tokenData.user;
-        }
-      }
-    }
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan. Silakan login kembali.' }, { status: 401 })
-    }
+    const session = await requireAuth(request);
+    assertAdminOrSuperAdmin(session);
 
-    // 2. Verify requester has 'superadmin' or 'admin' role
-    const { data: userRoleData, error: roleError } = await adminSupabase
-      .from('user_roles')
-      .select('role, parent_admin_id')
-      .eq('user_id', user.id)
-      .single()
+    const body = await request.json();
+    const { email, password, role: requestedRole, parentAdminId: requestedParentAdminId } = body;
 
-    if (roleError || (userRoleData?.role !== 'superadmin' && userRoleData?.role !== 'admin')) {
-      return NextResponse.json({ error: 'Forbidden: Requires administrative privileges' }, { status: 403 })
-    }
-
-    const requesterRole = userRoleData.role;
-    const requesterId = user.id;
-
-    // 3. Parse request body
-    const { email, password, role: requestedRole, parentAdminId: requestedParentAdminId } = await request.json()
-    
     if (!email || !password) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ error: 'Email dan kata sandi wajib diisi.' }, { status: 400 });
+    }
+
+    if (String(password).length < 6) {
+      return NextResponse.json({ error: 'Kata sandi minimal 6 karakter.' }, { status: 400 });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    // Check if email already exists
+    const existing = await query(`SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1`, [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return NextResponse.json({ error: 'Alamat email ini sudah terdaftar di sistem.' }, { status: 409 });
     }
 
     let role = 'user';
-    let parentAdminId = null;
+    let parentAdminId: string | null = null;
 
-    if (requesterRole === 'superadmin') {
+    if (session.role === 'superadmin') {
       role = requestedRole || 'user';
       parentAdminId = requestedParentAdminId || null;
-    } else if (requesterRole === 'admin') {
+    } else if (session.role === 'admin') {
       role = requestedRole === 'admin' ? 'admin' : 'user';
-      // If the requester is already a Co-Admin, they share the same parent_admin_id
-      // Otherwise, the requester is the Owner, so the new user's parent is the requester
-      parentAdminId = userRoleData.parent_admin_id || requesterId; 
+      parentAdminId = session.parentAdminId || session.userId;
     }
 
-    // 4. Create user using Admin Client (Service Role Key)
-    const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm for admin-created accounts
-    })
+    const passwordHash = await hashPassword(password);
 
-    if (createError) {
-      return NextResponse.json({ error: createError.message }, { status: 400 })
-    }
+    const createdUser = await withTransaction(async (client) => {
+      const userRes = await client.query<{ id: string; email: string }>(
+        `INSERT INTO users (email, password_hash)
+         VALUES ($1, $2)
+         RETURNING id, email`,
+        [cleanEmail, passwordHash]
+      );
 
-    // 5. Insert new user's role into user_roles table
-    const { error: insertRoleError } = await adminSupabase
-      .from('user_roles')
-      .insert([
-        { 
-          user_id: newUser.user.id, 
-          role: role, 
-          parent_admin_id: parentAdminId,
-          email: email
-        }
-      ])
+      const newUserId = userRes.rows[0].id;
 
-    if (insertRoleError) {
-      // Rollback user creation if role insertion fails to maintain data consistency
-      await adminSupabase.auth.admin.deleteUser(newUser.user.id)
-      return NextResponse.json({ error: 'Failed to assign role: ' + insertRoleError.message }, { status: 500 })
-    }
+      await client.query(
+        `INSERT INTO user_roles (user_id, email, role, parent_admin_id)
+         VALUES ($1, $2, $3, $4)`,
+        [newUserId, cleanEmail, role, parentAdminId]
+      );
 
-    return NextResponse.json({ 
-      success: true, 
-      user: { id: newUser.user.id, email: newUser.user.email, role } 
-    }, { status: 201 })
+      return { id: newUserId, email: cleanEmail, role };
+    });
 
+    return NextResponse.json({ success: true, user: createdUser }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+    const status = error.statusCode || 500;
+    return NextResponse.json({ error: error.message || 'Gagal membuat pengguna baru.' }, { status });
   }
 }

@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import imageCompression from 'browser-image-compression';
+
+// ============================================================================
+// hooks/useNodeMutations.ts: Spatial Node Mutation Hook (Edit & Delete)
+// Connects to /api/dashboard/nodes (Docker PostgreSQL)
+// Strictly < 250 lines
+// ============================================================================
 
 interface NodeMutationsProps {
   fetchData: () => void;
@@ -10,8 +15,6 @@ interface NodeMutationsProps {
 }
 
 export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNodes }: NodeMutationsProps) {
-  const supabase = createClient();
-  
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<any>(null);
@@ -87,12 +90,12 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
 
         const res = await fetch('/api/upload', {
           method: 'POST',
-          body: formData
+          body: formData,
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to upload new image');
-        
+
         finalImageUrl = data.url;
 
         // Delete Old Image Locally
@@ -101,96 +104,38 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
             await fetch('/api/upload/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filePath: selectedNode.image_url })
+              body: JSON.stringify({ filePath: selectedNode.image_url }),
             });
           } catch (err) {
-            console.error("Failed to delete old image locally:", err);
+            console.error('Failed to delete old image locally:', err);
           }
         }
       }
 
-      // Handle Location mapping & update in-place (scoped strictly to company group)
-      let locId = selectedNode.location_id;
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentUserId = sessionData?.session?.user?.id;
-      const ownerId = selectedNode.created_by || currentUserId;
-      const companySuffix = ownerId ? ownerId.slice(0, 8) : Date.now().toString();
-      const baseSlug = editLocationName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'loc';
-      const slug = `${baseSlug}-${companySuffix}`;
+      // Update Node and Location via Standalone API
+      const updateRes = await fetch('/api/dashboard/nodes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nodeId: selectedNode.id,
+          locationName: editLocationName,
+          description: editLocationDescription,
+          sectionId: editLocationSectionId || null,
+          captureDate: editCaptureDate || null,
+          isPublished: editIsPublished,
+          imageUrl: finalImageUrl,
+        }),
+      });
 
-      if (locId) {
-        // Direct update on existing location record linked to this node
-        const { error: locUpdateErr } = await supabase
-          .from('locations')
-          .update({
-            name: editLocationName,
-            slug,
-            description: editLocationDescription,
-            section_id: editLocationSectionId || null
-          })
-          .eq('id', locId);
-
-        if (locUpdateErr) {
-          console.warn('Location update warning:', locUpdateErr.message || locUpdateErr);
-        }
-      } else {
-        // Fallback: search by slug or create a new location
-        let locQuery = supabase
-          .from('locations')
-          .select('id')
-          .eq('slug', slug);
-
-        if (ownerId) {
-          locQuery = locQuery.eq('created_by', ownerId);
-        }
-
-        const { data: existingLoc } = await locQuery.maybeSingle();
-
-        if (existingLoc) {
-          locId = existingLoc.id;
-          await supabase
-            .from('locations')
-            .update({
-              name: editLocationName,
-              description: editLocationDescription,
-              section_id: editLocationSectionId || null
-            })
-            .eq('id', locId);
-        } else {
-          const { data: newLoc, error: insertErr } = await supabase
-            .from('locations')
-            .insert({
-              name: editLocationName,
-              slug,
-              description: editLocationDescription,
-              section_id: editLocationSectionId || null,
-              created_by: ownerId
-            })
-            .select('id')
-            .single();
-
-          if (insertErr) throw insertErr;
-          locId = newLoc.id;
-        }
+      if (!updateRes.ok) {
+        const updateData = await updateRes.json();
+        throw new Error(updateData.error || 'Gagal memperbarui node.');
       }
 
-      // Update Spatial Node DB Record (PRESERVING original created_by so node stays in its company group)
-      const { error: nodeUpdateErr } = await supabase
-        .from('spatial_nodes')
-        .update({
-          location_id: locId,
-          capture_date: editCaptureDate || null,
-          is_published: editIsPublished,
-          image_url: finalImageUrl
-        })
-        .eq('id', selectedNode.id);
-
-      if (nodeUpdateErr) throw nodeUpdateErr;
-      
       setIsEditModalOpen(false);
-      fetchData(); // Refresh the table
+      fetchData();
     } catch (err: any) {
-      setModalError(err.message || 'Failed to update node');
+      setModalError(err.message || 'Gagal memperbarui titik node.');
     } finally {
       setModalLoading(false);
     }
@@ -206,94 +151,48 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
     if (!nodeToDelete) return;
     setDeleteLoading(true);
     setDeleteError('');
-    
+
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      if (!user) throw new Error('Authentication required');
-
-      // Resolve company group IDs
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role, parent_admin_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const companyOwnerId = roleData?.parent_admin_id || user.id;
-      let groupUserIds: string[] = [user.id];
-      if (companyOwnerId) {
-        const { data: groupUsers } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
-        groupUserIds = (groupUsers || []).map(u => u.user_id);
-        if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
-      }
-
+      // 1. Delete physical image if exists
       if (nodeToDelete.image_url) {
-        const res = await fetch('/api/upload/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath: nodeToDelete.image_url })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to delete physical image file');
+        try {
+          await fetch('/api/upload/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath: nodeToDelete.image_url }),
+          });
+        } catch (err) {
+          console.warn('Physical file deletion warning:', err);
         }
       }
 
-      // Delete node strictly scoped to groupUserIds
-      let deleteNodeQuery = supabase
-        .from('spatial_nodes')
-        .delete()
-        .eq('id', nodeToDelete.id);
+      // 2. Delete database records via Standalone API (Node & Location cascade)
+      const deleteRes = await fetch(`/api/dashboard/nodes?id=${encodeURIComponent(nodeToDelete.id)}`, {
+        method: 'DELETE',
+      });
 
-      if (roleData?.role !== 'superadmin') {
-        deleteNodeQuery = deleteNodeQuery.in('created_by', groupUserIds);
-      }
-
-      const { error: nodeError } = await deleteNodeQuery;
-      if (nodeError) throw nodeError;
-
-      if (nodeToDelete.location_id) {
-        // Only delete location record if no other nodes reference it
-        const { count } = await supabase
-          .from('spatial_nodes')
-          .select('id', { count: 'exact', head: true })
-          .eq('location_id', nodeToDelete.location_id);
-
-        if (!count || count === 0) {
-          let deleteLocQuery = supabase
-            .from('locations')
-            .delete()
-            .eq('id', nodeToDelete.location_id);
-
-          if (roleData?.role !== 'superadmin') {
-            deleteLocQuery = deleteLocQuery.in('created_by', groupUserIds);
-          }
-
-          await deleteLocQuery;
-        }
+      if (!deleteRes.ok) {
+        const deleteData = await deleteRes.json();
+        throw new Error(deleteData.error || 'Gagal menghapus node.');
       }
 
       setIsDeleteModalOpen(false);
-      
-      setNodes(prev => prev.filter(n => n.id !== nodeToDelete.id));
-      setLocations(prev => prev.filter(l => l.id !== nodeToDelete.location_id));
-      setTotalNodes(prev => Math.max(0, prev - 1));
-      
+
+      setNodes((prev) => prev.filter((n) => n.id !== nodeToDelete.id));
+      setLocations((prev) => prev.filter((l) => l.id !== nodeToDelete.location_id));
+      setTotalNodes((prev) => Math.max(0, prev - 1));
+
       setNodeToDelete(null);
       fetchData();
     } catch (err: any) {
       console.error('Delete error:', err);
-      setDeleteError(err.message || 'Failed to complete full deletion process.');
+      setDeleteError(err.message || 'Gagal menyelesaikan proses penghapusan.');
     } finally {
       setDeleteLoading(false);
     }
   };
 
   return {
-    // Edit state & functions
     isEditModalOpen,
     setIsEditModalOpen,
     selectedNode,
@@ -309,19 +208,18 @@ export function useNodeMutations({ fetchData, setNodes, setLocations, setTotalNo
     setEditIsPublished,
     editImageFile,
     editImagePreview,
+    handleEditImageSelect,
+    handleEditSubmit,
     modalLoading,
     modalError,
     openEditModal,
-    handleEditImageSelect,
-    handleEditSubmit,
 
-    // Delete state & functions
     isDeleteModalOpen,
     setIsDeleteModalOpen,
     nodeToDelete,
     deleteLoading,
     deleteError,
     openDeleteModal,
-    confirmDeleteNode
+    confirmDeleteNode,
   };
 }

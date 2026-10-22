@@ -1,164 +1,154 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { requireAuth, getGroupUserIds } from '@/lib/auth/rbac';
+import { query } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+// ============================================================================
+// app/api/dashboard/sections/route.ts: Standalone PostgreSQL Sections API
+// Fully decoupled from Supabase client / server
+// ============================================================================
+
+export async function GET(req: Request) {
+  try {
+    const session = await requireAuth(req);
+    const { searchParams } = new URL(req.url);
+    const companyId = searchParams.get('companyId');
+
+    let groupUserIds: string[] = [];
+
+    if (session.role === 'superadmin') {
+      if (companyId && companyId !== 'all') {
+        const usersRes = await query<{ user_id: string }>(
+          `SELECT user_id FROM user_roles WHERE user_id = $1 OR parent_admin_id = $1`,
+          [companyId]
+        );
+        groupUserIds = usersRes.rows.map((r) => r.user_id);
+      }
+    } else {
+      groupUserIds = await getGroupUserIds(session);
+    }
+
+    let sql = `SELECT id, name, created_by, created_at FROM company_sections`;
+    const params: any[] = [];
+
+    if (groupUserIds.length > 0) {
+      sql += ` WHERE created_by = ANY($1)`;
+      params.push(groupUserIds);
+    }
+
+    sql += ` ORDER BY created_at ASC`;
+
+    const res = await query(sql, params);
+    return NextResponse.json({ success: true, sections: res.rows });
+  } catch (error: any) {
+    const status = error.statusCode || 500;
+    return NextResponse.json({ error: error.message || 'Gagal memuat seksi wilayah.' }, { status });
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await requireAuth(req);
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role, parent_admin_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
-      return NextResponse.json({ error: 'Only admins can create sections' }, { status: 403 });
+    if (session.role !== 'admin' && session.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya administrator yang dapat membuat seksi.' }, { status: 403 });
     }
 
     const body = await req.json();
     const { name, created_by } = body;
 
-    if (!name) {
-      return NextResponse.json({ error: 'Section name is required' }, { status: 400 });
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json({ error: 'Nama seksi wilayah wajib diisi.' }, { status: 400 });
     }
 
-    const targetCreatedBy = roleData.role === 'superadmin' && created_by 
-      ? created_by 
-      : (roleData.parent_admin_id || user.id);
+    const targetCreatedBy =
+      session.role === 'superadmin' && created_by
+        ? created_by
+        : (session.parentAdminId || session.userId);
 
-    // Insert section
-    const { data, error } = await supabase
-      .from('company_sections')
-      .insert({
-        name,
-        created_by: targetCreatedBy
-      })
-      .select()
-      .single();
+    const res = await query(
+      `INSERT INTO company_sections (name, created_by, created_at, updated_at) 
+       VALUES ($1, $2, NOW(), NOW()) 
+       RETURNING id, name, created_by, created_at`,
+      [name.trim(), targetCreatedBy]
+    );
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, section: res.rows[0] });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: Request) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const url = new URL(req.url);
-    const id = url.searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ error: 'Section ID is required' }, { status: 400 });
-    }
-
-    // Check permissions & group scoping
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role, parent_admin_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
-        return NextResponse.json({ error: 'Only admins can delete sections' }, { status: 403 });
-    }
-
-    const companyOwnerId = roleData.parent_admin_id || user.id;
-    let groupUserIds: string[] = [user.id];
-    if (companyOwnerId) {
-      const { data: groupUsers } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
-      groupUserIds = (groupUsers || []).map(u => u.user_id);
-      if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
-    }
-
-    // Delete section
-    let deleteQuery = supabase.from('company_sections').delete().eq('id', id);
-    if (roleData.role !== 'superadmin') {
-      deleteQuery = deleteQuery.in('created_by', groupUserIds);
-    }
-
-    const { error } = await deleteQuery;
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error.statusCode || 500;
+    return NextResponse.json({ error: error.message || 'Gagal menambahkan seksi wilayah.' }, { status });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await requireAuth(req);
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (session.role !== 'admin' && session.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya administrator yang dapat memperbarui seksi.' }, { status: 403 });
     }
 
     const body = await req.json();
     const { id, name } = body;
 
-    if (!id || !name) {
-      return NextResponse.json({ error: 'ID and name are required' }, { status: 400 });
+    if (!id || !name || !name.trim()) {
+      return NextResponse.json({ error: 'ID dan nama seksi diperlukan.' }, { status: 400 });
     }
 
-    // Check permissions
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role, parent_admin_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
-        return NextResponse.json({ error: 'Only admins can update sections' }, { status: 403 });
+    let groupUserIds: string[] = [];
+    if (session.role !== 'superadmin') {
+      groupUserIds = await getGroupUserIds(session);
     }
 
-    const companyOwnerId = roleData.parent_admin_id || user.id;
-    let groupUserIds: string[] = [user.id];
-    if (companyOwnerId) {
-      const { data: groupUsers } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .or(`user_id.eq.${companyOwnerId},parent_admin_id.eq.${companyOwnerId}`);
-      groupUserIds = (groupUsers || []).map(u => u.user_id);
-      if (!groupUserIds.includes(companyOwnerId)) groupUserIds.push(companyOwnerId);
+    let updateSql = `UPDATE company_sections SET name = $1, updated_at = NOW() WHERE id = $2`;
+    const params: any[] = [name.trim(), id];
+
+    if (session.role !== 'superadmin') {
+      updateSql += ` AND created_by = ANY($3)`;
+      params.push(groupUserIds);
     }
 
-    // Update section
-    let updateQuery = supabase.from('company_sections').update({ name }).eq('id', id);
-    if (roleData.role !== 'superadmin') {
-      updateQuery = updateQuery.in('created_by', groupUserIds);
-    }
-
-    const { error } = await updateQuery;
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
+    await query(updateSql, params);
+    return NextResponse.json({ success: true, message: 'Seksi berhasil diperbarui.' });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error.statusCode || 500;
+    return NextResponse.json({ error: error.message || 'Gagal memperbarui seksi.' }, { status });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await requireAuth(req);
+
+    if (session.role !== 'admin' && session.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya administrator yang dapat menghapus seksi.' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID seksi diperlukan.' }, { status: 400 });
+    }
+
+    let groupUserIds: string[] = [];
+    if (session.role !== 'superadmin') {
+      groupUserIds = await getGroupUserIds(session);
+    }
+
+    let deleteSql = `DELETE FROM company_sections WHERE id = $1`;
+    const params: any[] = [id];
+
+    if (session.role !== 'superadmin') {
+      deleteSql += ` AND created_by = ANY($2)`;
+      params.push(groupUserIds);
+    }
+
+    await query(deleteSql, params);
+    return NextResponse.json({ success: true, message: 'Seksi berhasil dihapus.' });
+  } catch (error: any) {
+    const status = error.statusCode || 500;
+    return NextResponse.json({ error: error.message || 'Gagal menghapus seksi.' }, { status });
   }
 }

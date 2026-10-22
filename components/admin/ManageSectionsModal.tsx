@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Loader2, Layers } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Section = {
@@ -31,7 +30,6 @@ export default function ManageSectionsModal({
   const [loading, setLoading] = useState(true);
   const [newSectionName, setNewSectionName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     if (isOpen) {
@@ -42,21 +40,16 @@ export default function ManageSectionsModal({
   const fetchSections = async () => {
     setLoading(true);
     try {
-      // Because we have RLS "Users can read group sections"
-      // it should automatically return sections belonging to the user's admin group.
-      // If we are superadmin, we might need to filter by adminId if provided.
-      let query = supabase.from('company_sections').select('*').order('created_at', { ascending: true });
-      if (adminId && adminId !== 'all') {
-        query = query.eq('created_by', adminId);
+      const url = adminId && adminId !== 'all'
+        ? `/api/dashboard/sections?companyId=${encodeURIComponent(adminId)}`
+        : '/api/dashboard/sections';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setSections(data.sections || []);
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setSections(data || []);
     } catch (err: any) {
-      console.error('Error fetching sections:', err.message || JSON.stringify(err, null, 2), err);
-      // Let's also alert to the screen so the user can tell us what the error is
-      alert('Fetch Sections Error: ' + (err.message || JSON.stringify(err)));
+      console.error('Error fetching sections:', err);
     } finally {
       setLoading(false);
     }
@@ -68,25 +61,20 @@ export default function ManageSectionsModal({
     
     setIsSubmitting(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Not authenticated');
-
-      let creatorId = userData.user.id;
-      // If adminId is provided, and we are superadmin, create on behalf of adminId
-      if (adminId) {
-        creatorId = adminId;
-      }
-
-      const { data, error } = await supabase
-        .from('company_sections')
-        .insert([{ name: newSectionName.trim(), created_by: creatorId }])
-        .select()
-        .single();
-        
-      if (error) throw error;
-      if (data) {
-        setSections([...sections, data]);
-        setNewSectionName('');
+      const res = await fetch('/api/dashboard/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSectionName.trim(), created_by: adminId || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.section) {
+          setSections([...sections, data.section]);
+          setNewSectionName('');
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Gagal menambah sektor');
       }
     } catch (err) {
       console.error('Error adding section:', err);
@@ -99,13 +87,15 @@ export default function ManageSectionsModal({
   const handleDeleteSection = async (id: string) => {
     if (!confirm(t('confirm') + '?')) return;
     try {
-      const { error } = await supabase
-        .from('company_sections')
-        .delete()
-        .eq('id', id);
-        
-      if (error) throw error;
-      setSections(sections.filter(s => s.id !== id));
+      const res = await fetch(`/api/dashboard/sections?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSections(sections.filter(s => s.id !== id));
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Gagal menghapus sektor');
+      }
     } catch (err) {
       console.error('Error deleting section:', err);
       alert('Gagal menghapus sektor');
@@ -118,15 +108,19 @@ export default function ManageSectionsModal({
   const handleEditSection = async (id: string) => {
     if (!editingName.trim()) return;
     try {
-      const { error } = await supabase
-        .from('company_sections')
-        .update({ name: editingName.trim() })
-        .eq('id', id);
-        
-      if (error) throw error;
-      setSections(sections.map(s => s.id === id ? { ...s, name: editingName.trim() } : s));
-      setEditingId(null);
-      setEditingName('');
+      const res = await fetch('/api/dashboard/sections', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name: editingName.trim() }),
+      });
+      if (res.ok) {
+        setSections(sections.map(s => s.id === id ? { ...s, name: editingName.trim() } : s));
+        setEditingId(null);
+        setEditingName('');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Gagal memperbarui sektor');
+      }
     } catch (err) {
       console.error('Error updating section:', err);
       alert('Gagal memperbarui sektor');

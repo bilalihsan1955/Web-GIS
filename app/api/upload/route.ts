@@ -1,84 +1,102 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient, createClient } from '@/utils/supabase/server';
+import { uploadFile, deleteFile } from '@/lib/storage';
+import { validateFileMagicBytes } from '@/lib/validations/security';
+import { enforceRateLimit } from '@/lib/security/rateLimit';
+import { checkIdempotency, saveIdempotentResponse } from '@/lib/security/idempotency';
+import { getAuthSession } from '@/lib/auth/jwt';
+
+// ============================================================================
+// app/api/upload/route.ts: Enterprise Panorama 360° Storage Endpoint
+// Decoupled Storage, Magic-Bytes Validation, Rate Limiter & Idempotency Guard
+// ============================================================================
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB to support high-res compressed/uncompressed 360 panoramas
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB for high-res 360 panoramas
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Please log in to upload files.' }, { status: 401 });
+    // 1. Rate Limiting: max 30 uploads / min per IP (anti-DoS / disk exhaustion)
+    const rateLimitError = enforceRateLimit(req, 'upload', 30, 60000);
+    if (rateLimitError) return rateLimitError;
+
+    // 2. Idempotency Guard: prevent double-upload or network duplicate retry
+    const { idempotencyKey, cachedResponse } = checkIdempotency(req);
+    if (cachedResponse) return cachedResponse;
+
+    // 3. Authentication: Standalone JWT session
+    const session = await getAuthSession(req);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized: Sesi tidak ditemukan.' }, { status: 401 });
     }
 
+    // 4. Form Data extraction
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    
+
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'Tidak ada berkas yang diunggah.' }, { status: 400 });
     }
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type. Only JPG, PNG, and WebP images are allowed.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Tipe berkas tidak didukung. Hanya gambar JPG, PNG, dan WebP yang diizinkan.' },
+        { status: 400 }
+      );
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      return NextResponse.json({ error: 'File size exceeds the maximum limit of 50MB.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Ukuran berkas melebihi batas maksimum 50MB.' },
+        { status: 400 }
+      );
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Sanitize filename
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '');
-    const fileName = `${Date.now()}_${safeName}`;
-
-    const adminClient = createAdminClient();
-
-    // Upload file directly to Supabase Storage bucket 'panoramas'
-    const { data: uploadData, error: uploadError } = await adminClient.storage
-      .from('panoramas')
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: true
-      });
-
-    if (uploadError) {
-      console.error('Supabase Storage Upload Error:', uploadError);
-      return NextResponse.json({ error: `Supabase Storage upload failed: ${uploadError.message}` }, { status: 500 });
+    // 5. Binary Signature Magic-Bytes Verification (OWASP A04/A08)
+    const magicCheck = validateFileMagicBytes(buffer);
+    if (!magicCheck.isValid) {
+      return NextResponse.json(
+        { error: magicCheck.error || 'Signature berkas gambar tidak valid.' },
+        { status: 400 }
+      );
     }
 
-    // Retrieve public URL from Supabase Storage
-    const { data: urlData } = adminClient.storage
-      .from('panoramas')
-      .getPublicUrl(fileName);
+    // 6. Decoupled Storage Execution (Local Disk / S3 Compatible)
+    const storageResult = await uploadFile(buffer, file.name, file.type, 'panoramas');
 
-    return NextResponse.json({ url: urlData.publicUrl });
+    const responseBody = {
+      url: storageResult.url,
+      size: storageResult.size,
+      mimeType: storageResult.mimeType,
+    };
+
+    saveIdempotentResponse(idempotencyKey, responseBody, 200);
+    return NextResponse.json(responseBody);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Upload Error]:', error);
+    return NextResponse.json({ error: error.message || 'Gagal memproses unggahan berkas.' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Please log in to delete files.' }, { status: 401 });
+    const session = await getAuthSession(req);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized: Sesi tidak valid.' }, { status: 401 });
     }
 
-    const { fileName } = await req.json();
-    if (!fileName) return NextResponse.json({ error: 'No filename provided' }, { status: 400 });
+    const body = await req.json();
+    const targetPath = body.filePath || body.fileName;
+    if (!targetPath) {
+      return NextResponse.json({ error: 'Parameter filePath tidak ditemukan.' }, { status: 400 });
+    }
 
-    const safeName = fileName.split('/').pop()?.replace(/[^a-zA-Z0-9.-_]/g, '');
-    if (!safeName) return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
-
-    const adminClient = createAdminClient();
-    await adminClient.storage.from('panoramas').remove([safeName]);
-
-    return NextResponse.json({ success: true });
+    const success = await deleteFile(targetPath);
+    return NextResponse.json({ success });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Delete Storage Error]:', error);
+    return NextResponse.json({ error: error.message || 'Gagal menghapus berkas.' }, { status: 500 });
   }
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
@@ -8,8 +7,14 @@ export default function SignOutButton() {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('webgis_user_role');
+    }
     router.refresh();
     router.push('/dashboard/login');
   };

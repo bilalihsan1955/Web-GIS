@@ -1,220 +1,189 @@
 import { NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { requireAuth, getGroupUserIds } from '@/lib/auth/rbac';
+import { query } from '@/lib/db';
 
-// Helper to get authenticated user's role and allowed company group user IDs
-async function getUserGroupContext(supabase: any, adminSupabase: any, userId: string) {
-  const { data: roleData } = await adminSupabase
-    .from('user_roles')
-    .select('role, parent_admin_id')
-    .eq('user_id', userId)
-    .maybeSingle();
+export const dynamic = 'force-dynamic';
 
-  const userRole = roleData?.role || 'user';
-  const userGroupId = roleData?.parent_admin_id || userId;
-
-  const { data: groupUsers } = await adminSupabase
-    .from('user_roles')
-    .select('user_id')
-    .or(`user_id.eq.${userGroupId},parent_admin_id.eq.${userGroupId}`);
-
-  const groupUserIds = (groupUsers || []).map((u: any) => u.user_id);
-  if (groupUserIds.length === 0) groupUserIds.push(userGroupId);
-
-  return { userRole, userGroupId, groupUserIds };
-}
+// ============================================================================
+// app/api/dashboard/boundaries/route.ts: Standalone Multi-Tenant Boundaries API
+// Uses lib/db Parameterized SQL & Zero-Trust RBAC (OWASP API1:BOLA & A03:SQLi)
+// ============================================================================
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAuth(request);
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
-    const adminSupabase = createAdminClient();
+    const includeGeojson = searchParams.get('include_geojson') === 'true';
 
-    const { userRole, userGroupId, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
+    let groupUserIds: string[] = [];
 
-    let targetAdminId = userGroupId;
-    if (userRole === 'superadmin' && companyId && companyId !== 'all') {
-      targetAdminId = companyId;
+    if (session.role === 'superadmin') {
+      if (companyId && companyId !== 'all') {
+        const usersRes = await query<{ user_id: string }>(
+          `SELECT user_id FROM user_roles WHERE user_id = $1 OR parent_admin_id = $1`,
+          [companyId]
+        );
+        groupUserIds = usersRes.rows.map((r) => r.user_id);
+      }
+    } else {
+      groupUserIds = await getGroupUserIds(session);
     }
 
-    let query = adminSupabase
-      .from('company_boundaries')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const selectFields = includeGeojson
+      ? 'id, name, color, opacity, total_area_ha, feature_count, is_visible, created_by, created_at, geojson'
+      : 'id, name, color, opacity, total_area_ha, feature_count, is_visible, created_by, created_at';
 
-    if (userRole === 'superadmin' && companyId && companyId !== 'all') {
-      const { data: targetGroupUsers } = await adminSupabase
-        .from('user_roles')
-        .select('user_id')
-        .or(`user_id.eq.${targetAdminId},parent_admin_id.eq.${targetAdminId}`);
-      const targetGroupUserIds = (targetGroupUsers || []).map((u: any) => u.user_id);
-      if (targetGroupUserIds.length === 0) targetGroupUserIds.push(targetAdminId);
-      query = query.in('created_by', targetGroupUserIds);
-    } else if (userRole !== 'superadmin') {
-      query = query.in('created_by', groupUserIds);
+    let sql = `SELECT ${selectFields} FROM company_boundaries`;
+    const params: any[] = [];
+
+    if (groupUserIds.length > 0) {
+      sql += ` WHERE created_by = ANY($1)`;
+      params.push(groupUserIds);
     }
 
-    const { data: boundaries, error } = await query;
+    sql += ` ORDER BY created_at DESC`;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ boundaries: boundaries || [] });
+    const result = await query(sql, params);
+    return NextResponse.json({ boundaries: result.rows });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err.statusCode || 500;
+    return NextResponse.json({ error: err.message || 'Gagal memuat batas wilayah.' }, { status });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAuth(request);
     const body = await request.json();
     const { boundaries, assignToGroupId } = body;
 
     if (!boundaries || !Array.isArray(boundaries) || boundaries.length === 0) {
-      return NextResponse.json({ error: 'No boundaries provided' }, { status: 400 });
+      return NextResponse.json({ error: 'Data batas wilayah tidak boleh kosong.' }, { status: 400 });
     }
 
-    const adminSupabase = createAdminClient();
-    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
-
-    // Enforce multi-tenant security on POST
-    let createdByUserId = user.id;
-    if (userRole === 'superadmin' && assignToGroupId && assignToGroupId !== 'all') {
+    let createdByUserId = session.userId;
+    if (session.role === 'superadmin' && assignToGroupId && assignToGroupId !== 'all') {
       createdByUserId = assignToGroupId;
-    } else if (userRole !== 'superadmin') {
-      // Non-superadmins can ONLY assign boundaries to their own company group
-      if (assignToGroupId && !groupUserIds.includes(assignToGroupId)) {
-        return NextResponse.json({ error: 'Forbidden: Cannot create boundary for another company' }, { status: 403 });
+    } else if (session.role !== 'superadmin') {
+      const allowedIds = await getGroupUserIds(session);
+      if (assignToGroupId && !allowedIds.includes(assignToGroupId)) {
+        return NextResponse.json({ error: 'Akses ditolak: Tidak dapat membuat batas untuk perusahaan lain.' }, { status: 403 });
       }
     }
 
-    const recordsToInsert = boundaries.map((b: any) => ({
-      name: b.name || 'Boundary Layer',
-      geojson: b.geojson,
-      color: b.color || '#06b6d4',
-      opacity: b.opacity ?? 0.35,
-      total_area_ha: b.totalAreaHa || 0,
-      feature_count: b.featureCount || 1,
-      is_visible: true,
-      created_by: createdByUserId,
-    }));
-
-    const { data: inserted, error } = await adminSupabase
-      .from('company_boundaries')
-      .insert(recordsToInsert)
-      .select('*');
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    const inserted: any[] = [];
+    for (const b of boundaries) {
+      const res = await query(
+        `INSERT INTO company_boundaries (name, geojson, color, opacity, total_area_ha, feature_count, is_visible, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+         RETURNING *`,
+        [
+          b.name || 'Boundary Layer',
+          JSON.stringify(b.geojson),
+          b.color || '#06b6d4',
+          typeof b.opacity === 'number' ? b.opacity : 0.35,
+          typeof b.totalAreaHa === 'number' ? b.totalAreaHa : 0,
+          typeof b.featureCount === 'number' ? b.featureCount : 1,
+          createdByUserId,
+        ]
+      );
+      if (res.rows[0]) inserted.push(res.rows[0]);
     }
 
     return NextResponse.json({ success: true, boundaries: inserted });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err.statusCode || 500;
+    return NextResponse.json({ error: err.message || 'Gagal menyimpan batas wilayah.' }, { status });
   }
 }
 
 export async function PUT(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAuth(request);
     const body = await request.json();
     const { id, is_visible, color, opacity, name } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Boundary ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'ID batas wilayah wajib diisi.' }, { status: 400 });
     }
 
-    const adminSupabase = createAdminClient();
-    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
-
-    const updatePayload: any = {};
-    if (typeof is_visible === 'boolean') updatePayload.is_visible = is_visible;
-    if (color) updatePayload.color = color;
-    if (typeof opacity === 'number') updatePayload.opacity = opacity;
-    if (name) updatePayload.name = name;
-
-    let updateQuery = adminSupabase
-      .from('company_boundaries')
-      .update(updatePayload)
-      .eq('id', id);
-
-    // Enforce multi-tenant security on PUT
-    if (userRole !== 'superadmin') {
-      updateQuery = updateQuery.in('created_by', groupUserIds);
+    let groupUserIds: string[] = [];
+    if (session.role !== 'superadmin') {
+      groupUserIds = await getGroupUserIds(session);
     }
 
-    const { data: updated, error } = await updateQuery.select('*').maybeSingle();
+    let updateSql = `
+      UPDATE company_boundaries 
+      SET is_visible = COALESCE($1, is_visible),
+          color = COALESCE($2, color),
+          opacity = COALESCE($3, opacity),
+          name = COALESCE($4, name),
+          updated_at = NOW()
+      WHERE id = $5
+    `;
+    const params: any[] = [
+      typeof is_visible === 'boolean' ? is_visible : null,
+      color || null,
+      typeof opacity === 'number' ? opacity : null,
+      name || null,
+      id,
+    ];
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    if (!updated) {
-      return NextResponse.json({ error: 'Boundary layer not found or access denied' }, { status: 404 });
+    if (groupUserIds.length > 0) {
+      updateSql += ` AND created_by = ANY($6)`;
+      params.push(groupUserIds);
     }
 
-    return NextResponse.json({ success: true, boundary: updated });
+    updateSql += ` RETURNING *`;
+
+    const result = await query(updateSql, params);
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Batas wilayah tidak ditemukan atau akses ditolak.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, boundary: result.rows[0] });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err.statusCode || 500;
+    return NextResponse.json({ error: err.message || 'Gagal memperbarui batas wilayah.' }, { status });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAuth(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Boundary ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'ID batas wilayah wajib diisi.' }, { status: 400 });
     }
 
-    const adminSupabase = createAdminClient();
-    const { userRole, groupUserIds } = await getUserGroupContext(supabase, adminSupabase, user.id);
-
-    let deleteQuery = adminSupabase
-      .from('company_boundaries')
-      .delete()
-      .eq('id', id);
-
-    // Enforce multi-tenant security on DELETE
-    if (userRole !== 'superadmin') {
-      deleteQuery = deleteQuery.in('created_by', groupUserIds);
+    let groupUserIds: string[] = [];
+    if (session.role !== 'superadmin') {
+      groupUserIds = await getGroupUserIds(session);
     }
 
-    const { error } = await deleteQuery;
+    let deleteSql = `DELETE FROM company_boundaries WHERE id = $1`;
+    const params: any[] = [id];
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (groupUserIds.length > 0) {
+      deleteSql += ` AND created_by = ANY($2)`;
+      params.push(groupUserIds);
+    }
+
+    deleteSql += ` RETURNING id`;
+
+    const result = await query(deleteSql, params);
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Batas wilayah tidak ditemukan atau akses ditolak.' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err.statusCode || 500;
+    return NextResponse.json({ error: err.message || 'Gagal menghapus batas wilayah.' }, { status });
   }
 }

@@ -1,42 +1,51 @@
 import { Metadata } from 'next';
-import { createAdminClient } from '@/utils/supabase/server';
+import { query } from '@/lib/db';
 
 export async function generateMetadata(
   props: { params: Promise<{ adminId: string }> }
 ): Promise<Metadata> {
   const params = await props.params;
   const adminId = params.adminId;
-  const adminSupabase = createAdminClient();
 
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  let profileData = null;
+  let profileData: {
+    company_name: string | null;
+    company_description: string | null;
+    company_slug: string | null;
+  } | null = null;
 
   try {
     if (uuidRegex.test(adminId)) {
-      const { data } = await adminSupabase
-        .from('user_roles')
-        .select('company_name, company_description, company_slug')
-        .eq('user_id', adminId)
-        .single();
-      
-      // If company_slug exists, it shouldn't be accessed via UUID anyway
-      if (data && !data.company_slug) {
-        profileData = data;
+      const res = await query<{
+        company_name: string | null;
+        company_description: string | null;
+        company_slug: string | null;
+      }>(
+        `SELECT company_name, company_description, company_slug FROM user_roles WHERE user_id = $1 LIMIT 1`,
+        [adminId]
+      );
+      if (res.rows[0] && !res.rows[0].company_slug) {
+        profileData = res.rows[0];
       }
     } else {
-      const { data } = await adminSupabase
-        .from('user_roles')
-        .select('company_name, company_description, company_slug')
-        .eq('company_slug', adminId)
-        .single();
-      profileData = data;
+      const res = await query<{
+        company_name: string | null;
+        company_description: string | null;
+        company_slug: string | null;
+      }>(
+        `SELECT company_name, company_description, company_slug FROM user_roles WHERE company_slug = $1 LIMIT 1`,
+        [adminId]
+      );
+      profileData = res.rows[0] || null;
     }
   } catch (err) {
-    console.error("Error fetching metadata for guest map", err);
+    console.error('Error fetching metadata for guest map:', err);
   }
 
   const title = profileData?.company_name ? `${profileData.company_name} — WebGIS` : 'Peta Interaktif — WebGIS';
-  const description = profileData?.company_description || 'Platform pemetaan dan visualisasi tata ruang perusahaan Anda dalam lingkungan 3D interaktif.';
+  const description =
+    profileData?.company_description ||
+    'Platform pemetaan dan visualisasi tata ruang perusahaan Anda dalam lingkungan 3D interaktif.';
 
   return {
     title,
