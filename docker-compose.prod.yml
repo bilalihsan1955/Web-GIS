@@ -10,6 +10,8 @@ services:
     image: postgres:16-alpine
     container_name: webgis-db
     restart: always
+    env_file:
+      - .env.production
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -19,10 +21,11 @@ services:
     networks:
       - webgis-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-webgis}"]
+      test: ["CMD-SHELL", "pg_isready"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
     # Security: Port 5432 is deliberately NOT published to the host/internet
 
   # 2. Next.js 16 Standalone Application Container
