@@ -116,10 +116,24 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   fetchBoundaries: async (companyId?: string) => {
     try {
-      const url = companyId && companyId !== 'all' 
-        ? `/api/dashboard/boundaries?include_geojson=true&companyId=${encodeURIComponent(companyId)}`
-        : '/api/dashboard/boundaries?include_geojson=true';
-      const res = await fetch(url);
+      const isDashboardUser = typeof window !== 'undefined' && localStorage.getItem('webgis_user_role');
+      let url = isDashboardUser
+        ? (companyId && companyId !== 'all'
+            ? `/api/dashboard/boundaries?include_geojson=true&companyId=${encodeURIComponent(companyId)}`
+            : '/api/dashboard/boundaries?include_geojson=true')
+        : (companyId && companyId !== 'all'
+            ? `/api/public/boundaries?adminId=${encodeURIComponent(companyId)}`
+            : '/api/public/boundaries');
+
+      let res = await fetch(url);
+      if (!res.ok && isDashboardUser) {
+        // Fallback to public API if dashboard endpoint returns 401
+        const publicUrl = companyId && companyId !== 'all'
+          ? `/api/public/boundaries?adminId=${encodeURIComponent(companyId)}`
+          : '/api/public/boundaries';
+        res = await fetch(publicUrl);
+      }
+
       if (res.ok) {
         const data = await res.json();
         set({ boundaries: data.boundaries || [] });
