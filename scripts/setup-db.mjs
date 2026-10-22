@@ -4,10 +4,15 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import dotenv from 'dotenv';
 
-// Load .env
-dotenv.config();
+// Load .env natively in Node 20+ if present (gracefully ignored in Docker where env vars are already passed)
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  }
+} catch {
+  // Gracefully ignored if .env file is not present or already in environment
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '..');
