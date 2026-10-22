@@ -98,9 +98,9 @@ ON CONFLICT (id) DO NOTHING;
 -- 7. Insert Demo Spatial Nodes (360 Nodes)
 INSERT INTO spatial_nodes (id, location_id, longitude, latitude, image_url, is_published, capture_date, created_by, created_at, updated_at)
 VALUES 
-  ('55555555-5555-5555-5555-555555555551', '44444444-4444-4444-4444-444444444441', 117.1536, -0.5021, '/demo/panorama-1.jpg', true, '2026-10-01', '11111111-1111-1111-1111-111111111111', NOW(), NOW()),
-  ('55555555-5555-5555-5555-555555555552', '44444444-4444-4444-4444-444444444442', 117.1582, -0.4998, '/demo/panorama-2.jpg', true, '2026-10-02', '11111111-1111-1111-1111-111111111111', NOW(), NOW())
-ON CONFLICT (id) DO NOTHING;
+  ('55555555-5555-5555-5555-555555555551', '44444444-4444-4444-4444-444444444441', 117.1536, -0.5021, '/uploads/1785598121161_IMG_20260714_075842_00_594.jpg', true, '2026-10-01', '11111111-1111-1111-1111-111111111111', NOW(), NOW()),
+  ('55555555-5555-5555-5555-555555555552', '44444444-4444-4444-4444-444444444442', 117.1582, -0.4998, '/uploads/1785598121171_IMG_20260716_075738_00_640.jpg', true, '2026-10-02', '11111111-1111-1111-1111-111111111111', NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET image_url = EXCLUDED.image_url;
 
 -- 8. Insert Demo Company Boundary (Sample Polygon)
 INSERT INTO company_boundaries (id, created_by, name, geojson, color, opacity, total_area_ha, feature_count, is_visible, created_at, updated_at)

@@ -44,8 +44,8 @@ services:
       # Security: Strictly bound to localhost (127.0.0.1) so only Nginx can forward traffic
       - "127.0.0.1:3000:3000"
     volumes:
-      # Persistent Volume for uploaded 360° panoramas and geojson files
-      - uploads_data:/app/public/uploads
+      # Host Bind Mount for uploaded 360° panoramas and geojson files
+      - ./public/uploads:/app/public/uploads
     depends_on:
       webgis-db:
         condition: service_healthy
@@ -55,8 +55,7 @@ services:
 volumes:
   pgdata:
     driver: local
-  uploads_data:
-    driver: local
+
 
 networks:
   webgis-net:
