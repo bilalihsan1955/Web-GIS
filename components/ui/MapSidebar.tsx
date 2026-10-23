@@ -48,6 +48,7 @@ export default function MapSidebar({
   const boundaries = useMapStore((s) => s.boundaries);
   const toggleBoundaryVisibility = useMapStore((s) => s.toggleBoundaryVisibility);
   const [isBoundariesExpanded, setIsBoundariesExpanded] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Filters & State from useMapStore
   const nodes = useMapStore((s) => s.nodes);
@@ -150,7 +151,20 @@ export default function MapSidebar({
   };
 
   return (
-    <aside className="w-80 sm:w-96 h-full flex flex-col bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-r border-zinc-200 dark:border-zinc-800 z-20 select-none">
+    <aside
+      className={`absolute left-0 top-0 bottom-0 z-20 w-80 sm:w-88 md:w-96 h-full flex flex-col bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-r border-zinc-200 dark:border-zinc-800 shadow-2xl select-none transition-transform duration-300 ease-in-out ${
+        isCollapsed ? '-translate-x-full' : 'translate-x-0'
+      }`}
+    >
+      {/* Toggle button on right edge of sidebar */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-7 top-4 z-30 flex items-center justify-center w-7 h-9 bg-white dark:bg-zinc-900 border border-l-0 border-zinc-200 dark:border-zinc-800 rounded-r-lg shadow-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+        title={isCollapsed ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
+        aria-label="Toggle map sidebar"
+      >
+        <ChevronLeft className={`w-3.5 h-3.5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+      </button>
       {/* Header Profile */}
       <div className="p-4 border-b border-zinc-200/60 dark:border-zinc-800/80 space-y-3">
         <div className="flex items-center justify-between">

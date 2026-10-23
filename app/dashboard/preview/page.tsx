@@ -167,7 +167,7 @@ export default function PreviewPage() {
     : hasValidCompany;
 
   return (
-    <div className="relative h-[calc(100vh-140px)] w-full rounded-[24px] overflow-hidden border border-zinc-200 dark:border-white/10 shadow-inner bg-zinc-950 flex">
+    <div className="relative h-[calc(100vh-140px)] w-full rounded-[24px] overflow-hidden border border-zinc-200 dark:border-white/10 shadow-inner bg-zinc-950">
       {/* Dynamic Map Component restricted to container bounds */}
       <MapboxGlobe adminId={activeAdminId} className="absolute inset-0 w-full h-full z-0" />
       
