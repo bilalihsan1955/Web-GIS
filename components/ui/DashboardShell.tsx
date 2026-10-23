@@ -11,6 +11,7 @@ import {
   Navigation
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/useDashboardStore';
+import { useMapStore } from '@/store/useMapStore';
 import { MAPBOX_STYLE } from '@/lib/constants';
 import MapSidebar from './MapSidebar';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -18,6 +19,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 export default function DashboardShell() {
   const { t } = useLanguage();
   const mapInstance = useDashboardStore((s) => s.mapInstance);
+  const nodes = useMapStore((s) => s.nodes);
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentStyle, setCurrentStyle] = useState(MAPBOX_STYLE);
@@ -122,7 +124,7 @@ export default function DashboardShell() {
           <div className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5 text-text-muted" />
             <span className="text-xs tabular-nums text-text-muted">
-              25 {t('nodesActive')}
+              {nodes.length} {t('nodesActive')}
             </span>
           </div>
         </div>
