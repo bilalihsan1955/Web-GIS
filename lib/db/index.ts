@@ -25,7 +25,7 @@ const poolConfig: PoolConfig = {
   idleTimeoutMillis: 30000,   // Close idle connections after 30s
   connectionTimeoutMillis: 5000, // Error out if connection takes > 5s
   ssl:
-    process.env.DATABASE_SSL === 'true' || (isProduction && !connectionString.includes('localhost'))
+    process.env.DATABASE_SSL === 'true' || connectionString.includes('sslmode=require')
       ? { rejectUnauthorized: false }
       : false,
 };
